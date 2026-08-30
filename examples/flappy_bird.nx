@@ -1,0 +1,166 @@
+// flappy_bird.nx — flap with Space or a left click, pass the pipes, don't
+// touch anything. Space restarts after a crash; Escape quits.
+use github_com.estevaofon.noxy_game_engine as game
+use rand
+
+let W = 400.0
+let H = 600.0
+let GROUND = 60.0            // height of the ground strip
+let BIRD_X = 100.0
+let BIRD_R = 14.0
+let GRAVITY = 1500.0         // px/s^2
+let FLAP = -430.0            // px/s, upward
+let PIPE_W = 64.0
+let PIPE_GAP = 170.0
+let PIPE_SPEED = 170.0       // px/s, leftward
+let PIPE_EVERY = 1.5         // seconds between pipes
+
+let SKY: game.Color = game.rgb(112, 197, 206)
+let PIPE: game.Color = game.rgb(96, 180, 64)
+let PIPE_DARK: game.Color = game.rgb(60, 120, 40)
+let DIRT: game.Color = game.rgb(222, 184, 100)
+let GRASS: game.Color = game.rgb(120, 200, 80)
+let BIRD: game.Color = game.rgb(255, 220, 60)
+
+game.init(400, 600, "Flappy Bird")
+
+let bird_y = H / 2.0
+let bird_vy = 0.0
+let pipe_x: float[] = []       // left edge of each pipe pair
+let pipe_gap: float[] = []     // center y of the gap
+let pipe_passed: bool[] = []   // already counted for the score
+let spawn_timer = 0.0
+let score = 0
+let best = 0
+let alive = true
+let started = false            // first flap starts the physics
+
+func reset() -> void
+    bird_y = H / 2.0
+    bird_vy = 0.0
+    pipe_x = []
+    pipe_gap = []
+    pipe_passed = []
+    spawn_timer = 0.0
+    score = 0
+    alive = true
+    started = false
+end
+
+func spawn_pipe() -> void
+    let margin = 90.0
+    let lo = to_int(margin + PIPE_GAP / 2.0)
+    let hi = to_int(H - GROUND - margin - PIPE_GAP / 2.0)
+    append(ref pipe_x, W)
+    append(ref pipe_gap, to_float(rand.random_int(lo, hi)))
+    append(ref pipe_passed, false)
+end
+
+// hits reports whether the bird overlaps the pipe pair i (top or bottom).
+func hits(i: int) -> bool
+    let x = pipe_x[i]
+    if BIRD_X + BIRD_R < x || BIRD_X - BIRD_R > x + PIPE_W then
+        return false
+    end
+    let top = pipe_gap[i] - PIPE_GAP / 2.0
+    let bottom = pipe_gap[i] + PIPE_GAP / 2.0
+    return bird_y - BIRD_R < top || bird_y + BIRD_R > bottom
+end
+
+func update(dt: float) -> void
+    bird_vy = bird_vy + GRAVITY * dt
+    bird_y = bird_y + bird_vy * dt
+
+    spawn_timer = spawn_timer + dt
+    if spawn_timer >= PIPE_EVERY then
+        spawn_timer = 0.0
+        spawn_pipe()
+    end
+
+    let keep_x: float[] = []
+    let keep_gap: float[] = []
+    let keep_passed: bool[] = []
+    let i = 0
+    while i < length(pipe_x) do
+        pipe_x[i] = pipe_x[i] - PIPE_SPEED * dt
+        if !pipe_passed[i] && pipe_x[i] + PIPE_W < BIRD_X then
+            pipe_passed[i] = true
+            score = score + 1
+        end
+        if hits(i) then
+            alive = false
+        end
+        if pipe_x[i] + PIPE_W > 0.0 then
+            append(ref keep_x, pipe_x[i])
+            append(ref keep_gap, pipe_gap[i])
+            append(ref keep_passed, pipe_passed[i])
+        end
+        i = i + 1
+    end
+    pipe_x = keep_x
+    pipe_gap = keep_gap
+    pipe_passed = keep_passed
+
+    if bird_y + BIRD_R > H - GROUND || bird_y - BIRD_R < 0.0 then
+        alive = false
+    end
+    if !alive then
+        if score > best then best = score end
+    end
+end
+
+func draw() -> void
+    game.clear(SKY)
+    let i = 0
+    while i < length(pipe_x) do
+        let x = pipe_x[i]
+        let top = pipe_gap[i] - PIPE_GAP / 2.0
+        let bottom = pipe_gap[i] + PIPE_GAP / 2.0
+        game.draw_rect(x, 0.0, PIPE_W, top, PIPE)
+        game.draw_rect(x - 4.0, top - 24.0, PIPE_W + 8.0, 24.0, PIPE_DARK)
+        game.draw_rect(x, bottom, PIPE_W, H - GROUND - bottom, PIPE)
+        game.draw_rect(x - 4.0, bottom, PIPE_W + 8.0, 24.0, PIPE_DARK)
+        i = i + 1
+    end
+    game.draw_rect(0.0, H - GROUND, W, GROUND, DIRT)
+    game.draw_rect(0.0, H - GROUND, W, 10.0, GRASS)
+
+    game.draw_circle(BIRD_X, bird_y, BIRD_R, BIRD)
+    game.draw_circle(BIRD_X + 6.0, bird_y - 4.0, 4.0, game.WHITE)
+    game.draw_circle(BIRD_X + 7.0, bird_y - 4.0, 2.0, game.BLACK)
+    game.draw_rect(BIRD_X + 10.0, bird_y + 1.0, 10.0, 5.0, game.rgb(240, 120, 40))
+
+    game.draw_text(f"{score}", W / 2.0 - 10.0, 24.0, 40, game.WHITE)
+    if !started then
+        game.draw_text("Space / click to flap", 100.0, 260.0, 20, game.WHITE)
+    end
+    if !alive then
+        game.draw_rect(60.0, 230.0, 280.0, 120.0, game.rgb(0, 0, 0))
+        game.draw_text("Game over", 130.0, 250.0, 30, game.RED)
+        game.draw_text(f"score {score}   best {best}", 105.0, 292.0, 20, game.WHITE)
+        game.draw_text("Space to restart", 120.0, 318.0, 18, game.WHITE)
+    end
+end
+
+while game.running() do
+    if game.key_pressed("escape") then
+        game.stop()
+    end
+    let flap = game.key_pressed("space") || game.mouse_pressed("left")
+    if !alive then
+        if game.key_pressed("space") then
+            reset()
+        end
+    else
+        if flap then
+            started = true
+            bird_vy = FLAP
+        end
+        if started then
+            update(game.delta())
+        end
+    end
+    draw()
+    game.flip()
+end
+game.quit()
