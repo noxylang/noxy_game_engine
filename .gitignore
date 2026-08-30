@@ -2,3 +2,5 @@
 # `go build -o bin/<asset> .` during development); dist/ is release/build.sh.
 bin/
 dist/
+/noxy_game_engine.exe
+/noxy_game_engine
