@@ -7,8 +7,9 @@ set -eu
 NAME="${1:?usage: build.sh <extension-name> [GOARCH]}"
 ARCH="${2:-$(go env GOARCH)}"
 OS="$(go env GOOS)"
-ext=""; [ "$OS" = windows ] && ext=".exe"
+ext=""; cgo=1
+[ "$OS" = windows ] && { ext=".exe"; cgo=0; }   # Ebiten is pure Go on Windows; cgo elsewhere
 mkdir -p dist
-GOARCH="$ARCH" go build -trimpath -ldflags=-s -o "dist/noxy-plugin-$NAME-$OS-$ARCH$ext" .
+CGO_ENABLED="$cgo" GOARCH="$ARCH" go build -trimpath -ldflags=-s -o "dist/noxy-plugin-$NAME-$OS-$ARCH$ext" .
 (cd dist && sha256sum -- "noxy-plugin-$NAME-$OS-$ARCH$ext" > "checksums-$OS-$ARCH.txt")
 echo "dist/noxy-plugin-$NAME-$OS-$ARCH$ext"
