@@ -64,7 +64,7 @@ the frame to the window in **one** call, waits for the next tick (60 Hz, so
 `flip` also paces the game like pygame's `clock.tick(60)`) and refreshes the
 input snapshot that `key_down`, `mouse_pos`, `running` and friends read.
 More in `examples/`: `smoke.nx` (installation check), `bouncing_ball.nx`,
-`pong.nx`.
+`pong.nx`, `sprite.nx` (images: plain, scaled, rotating, following the mouse).
 
 ## API
 
