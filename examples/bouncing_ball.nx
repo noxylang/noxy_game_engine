@@ -1,0 +1,33 @@
+// bouncing_ball.nx — a ball bouncing off the window edges. Escape quits.
+use github_com.estevaofon.noxy_game_engine as game
+
+let W = 640.0
+let H = 480.0
+game.init(640, 480, "Bouncing ball")
+
+let x = 320.0
+let y = 240.0
+let vx = 180.0   // px per second
+let vy = 140.0
+let r = 16.0
+
+while game.running() do
+    if game.key_pressed("escape") then
+        game.stop()
+    end
+    let dt: float = game.delta()
+    x = x + vx * dt
+    y = y + vy * dt
+    if x - r < 0.0 || x + r > W then
+        vx = -vx
+    end
+    if y - r < 0.0 || y + r > H then
+        vy = -vy
+    end
+
+    game.clear(game.BLACK)
+    game.draw_circle(x, y, r, game.YELLOW)
+    game.draw_text("Escape to quit", 10.0, 10.0, 16, game.WHITE)
+    game.flip()
+end
+game.quit()

@@ -1,0 +1,82 @@
+// pong.nx — two paddles (W/S and Up/Down), first to 5 wins. Escape quits.
+use github_com.estevaofon.noxy_game_engine as game
+
+let W = 640.0
+let H = 480.0
+let PADDLE_H = 80.0
+let PADDLE_W = 12.0
+let SPEED = 300.0
+
+game.init(640, 480, "Pong")
+
+let left_y = H / 2.0 - PADDLE_H / 2.0
+let right_y = left_y
+let ball_x = W / 2.0
+let ball_y = H / 2.0
+let ball_vx = 220.0
+let ball_vy = 160.0
+let score_l = 0
+let score_r = 0
+
+func reset_ball() -> void
+    ball_x = W / 2.0
+    ball_y = H / 2.0
+    ball_vx = -ball_vx
+    ball_vy = 160.0
+end
+
+func clamp(v: float, lo: float, hi: float) -> float
+    if v < lo then return lo end
+    if v > hi then return hi end
+    return v
+end
+
+while game.running() do
+    if game.key_pressed("escape") then
+        game.stop()
+    end
+    let dt: float = game.delta()
+
+    if game.key_down("w") then left_y = left_y - SPEED * dt end
+    if game.key_down("s") then left_y = left_y + SPEED * dt end
+    if game.key_down("up") then right_y = right_y - SPEED * dt end
+    if game.key_down("down") then right_y = right_y + SPEED * dt end
+    left_y = clamp(left_y, 0.0, H - PADDLE_H)
+    right_y = clamp(right_y, 0.0, H - PADDLE_H)
+
+    ball_x = ball_x + ball_vx * dt
+    ball_y = ball_y + ball_vy * dt
+    if ball_y < 0.0 || ball_y > H then
+        ball_vy = -ball_vy
+    end
+    // left paddle at x = 20, right paddle at x = W - 32
+    if ball_x < 32.0 && ball_y > left_y && ball_y < left_y + PADDLE_H then
+        ball_vx = -ball_vx * 1.05
+        ball_x = 32.0
+    end
+    if ball_x > W - 32.0 && ball_y > right_y && ball_y < right_y + PADDLE_H then
+        ball_vx = -ball_vx * 1.05
+        ball_x = W - 32.0
+    end
+    if ball_x < 0.0 then
+        score_r = score_r + 1
+        reset_ball()
+    end
+    if ball_x > W then
+        score_l = score_l + 1
+        reset_ball()
+    end
+
+    game.clear(game.BLACK)
+    game.draw_line(W / 2.0, 0.0, W / 2.0, H, game.rgb(80, 80, 80), 2.0)
+    game.draw_rect(20.0, left_y, PADDLE_W, PADDLE_H, game.WHITE)
+    game.draw_rect(W - 32.0, right_y, PADDLE_W, PADDLE_H, game.WHITE)
+    game.draw_circle(ball_x, ball_y, 8.0, game.YELLOW)
+    game.draw_text(f"{score_l}", W / 2.0 - 60.0, 20.0, 32, game.WHITE)
+    game.draw_text(f"{score_r}", W / 2.0 + 40.0, 20.0, 32, game.WHITE)
+    if score_l >= 5 || score_r >= 5 then
+        game.draw_text("Game over - Escape to quit", W / 2.0 - 120.0, H / 2.0, 20, game.RED)
+    end
+    game.flip()
+end
+game.quit()
