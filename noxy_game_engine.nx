@@ -1,0 +1,192 @@
+// noxy_game_engine.nx — typed wrapper over the `game` process extension.
+//
+// The natives (game_init, game_flip, game_load_image, game_quit) are
+// registered by the VM from noxy_ext.toml when this module is imported; the
+// binary in bin/ starts on the first call. Draw calls only append to a
+// per-frame command list; flip() sends the whole frame in ONE call, waits
+// for the next 60 Hz tick and refreshes the input snapshot read by key_down,
+// mouse_pos, running, ... A failure inside the extension is a runtime error
+// (`extension 'game' failed: <message>`), capturable with call_result.
+
+struct Color
+    r: int
+    g: int
+    b: int
+end
+
+struct Image
+    id: int
+    width: int
+    height: int
+end
+
+struct Point
+    x: int
+    y: int
+end
+
+let BLACK: Color = Color(0, 0, 0)
+let WHITE: Color = Color(255, 255, 255)
+let RED: Color = Color(255, 0, 0)
+let GREEN: Color = Color(0, 255, 0)
+let BLUE: Color = Color(0, 0, 255)
+let YELLOW: Color = Color(255, 255, 0)
+
+func rgb(r: int, g: int, b: int) -> Color
+    return Color(r, g, b)
+end
+
+// module state: the frame being built and the last input snapshot
+let _cmds: any[] = []
+let _running: bool = false
+let _dt: float = 0.0
+let _keys_down: string[] = []
+let _keys_pressed: string[] = []
+let _mouse_x: int = 0
+let _mouse_y: int = 0
+let _mouse_down: string[] = []
+let _mouse_pressed: string[] = []
+
+// init opens a width x height window titled `title`. Raises if called twice
+// or if the window cannot be opened.
+func init(width: int, height: int, title: string) -> void
+    game_init(width, height, title)
+    _running = true
+    _cmds = []
+end
+
+// running is true from init until the window is closed, stop() or quit().
+func running() -> bool
+    return _running
+end
+
+// stop leaves the game loop (running() becomes false); the window stays
+// until quit() or the end of the program.
+func stop() -> void
+    _running = false
+end
+
+// quit closes the window. Idempotent.
+func quit() -> void
+    _running = false
+    game_quit()
+end
+
+// flip shows the frame built since the last flip, waits for the next tick
+// (60 Hz) and refreshes the input snapshot. Raises on an invalid frame.
+func flip() -> void
+    let snap: map[string, any] = game_flip(_cmds)
+    _cmds = []
+    let closed: bool = snap["closed"]
+    if closed then
+        _running = false
+    end
+    let dt: float = snap["dt"]
+    _dt = dt
+    let kd: string[] = snap["keys_down"]
+    _keys_down = kd
+    let kp: string[] = snap["keys_pressed"]
+    _keys_pressed = kp
+    let mx: int = snap["mouse_x"]
+    _mouse_x = mx
+    let my: int = snap["mouse_y"]
+    _mouse_y = my
+    let md: string[] = snap["mouse_down"]
+    _mouse_down = md
+    let mp: string[] = snap["mouse_pressed"]
+    _mouse_pressed = mp
+end
+
+// delta is the time in seconds between the last two flips.
+func delta() -> float
+    return _dt
+end
+
+// ---- drawing (queued until flip) ----
+
+func clear(c: Color) -> void
+    append(ref _cmds, ["clear", c.r, c.g, c.b])
+end
+
+func draw_rect(x: float, y: float, w: float, h: float, c: Color) -> void
+    append(ref _cmds, ["rect", x, y, w, h, c.r, c.g, c.b, 0])
+end
+
+func draw_rect_outline(x: float, y: float, w: float, h: float, c: Color, thickness: float) -> void
+    append(ref _cmds, ["rect", x, y, w, h, c.r, c.g, c.b, thickness])
+end
+
+func draw_circle(cx: float, cy: float, radius: float, c: Color) -> void
+    append(ref _cmds, ["circle", cx, cy, radius, c.r, c.g, c.b, 0])
+end
+
+func draw_circle_outline(cx: float, cy: float, radius: float, c: Color, thickness: float) -> void
+    append(ref _cmds, ["circle", cx, cy, radius, c.r, c.g, c.b, thickness])
+end
+
+func draw_line(x1: float, y1: float, x2: float, y2: float, c: Color, thickness: float) -> void
+    append(ref _cmds, ["line", x1, y1, x2, y2, c.r, c.g, c.b, thickness])
+end
+
+// draw_text draws `s` with its top-left corner at (x, y), `size` px high,
+// in the built-in Go Regular font.
+func draw_text(s: string, x: float, y: float, size: int, c: Color) -> void
+    append(ref _cmds, ["text", s, x, y, size, c.r, c.g, c.b])
+end
+
+// load_image decodes a PNG or JPEG (path relative to the working directory).
+// Raises if the file is missing or not an image.
+func load_image(path: string) -> Image
+    let info: map[string, any] = game_load_image(path)
+    let id: int = info["id"]
+    let w: int = info["width"]
+    let h: int = info["height"]
+    return Image(id, w, h)
+end
+
+// draw_image draws img with its top-left corner at (x, y), unscaled.
+func draw_image(img: Image, x: float, y: float) -> void
+    append(ref _cmds, ["image", img.id, x, y, 1.0, 0.0])
+end
+
+// draw_image_ex scales img by `scale` and rotates it `angle_deg` degrees
+// around the center of the scaled image; (x, y) is the top-left corner.
+func draw_image_ex(img: Image, x: float, y: float, scale: float, angle_deg: float) -> void
+    append(ref _cmds, ["image", img.id, x, y, scale, angle_deg])
+end
+
+// ---- input (snapshot taken by the last flip) ----
+
+func _has(xs: string[], k: string) -> bool
+    for x in xs do
+        if x == k then
+            return true
+        end
+    end
+    return false
+end
+
+// key_down: the key is held. Names: "a".."z", "0".."9", "left" "right" "up"
+// "down", "space" "enter" "escape" "tab" "backspace", "shift" "ctrl" "alt",
+// "f1".."f12".
+func key_down(key: string) -> bool
+    return _has(_keys_down, key)
+end
+
+// key_pressed: the key went down during the last frame.
+func key_pressed(key: string) -> bool
+    return _has(_keys_pressed, key)
+end
+
+func mouse_pos() -> Point
+    return Point(_mouse_x, _mouse_y)
+end
+
+// mouse_down / mouse_pressed: button is "left", "right" or "middle".
+func mouse_down(button: string) -> bool
+    return _has(_mouse_down, button)
+end
+
+func mouse_pressed(button: string) -> bool
+    return _has(_mouse_pressed, button)
+end

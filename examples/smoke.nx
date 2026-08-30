@@ -1,0 +1,19 @@
+// smoke.nx — opens a window, draws a few frames and quits. Run it to check
+// the installation: `noxy examples/smoke.nx` prints "ok" and exits 0.
+use github_com.estevaofon.noxy_game_engine as game
+
+game.init(320, 240, "noxy_game_engine smoke")
+let frames = 0
+while game.running() && frames < 30 do
+    game.clear(game.rgb(20, 20, 40))
+    game.draw_rect(10.0 + frames * 4.0, 60.0, 50.0, 50.0, game.RED)
+    game.draw_rect_outline(200.0, 60.0, 50.0, 50.0, game.YELLOW, 2.0)
+    game.draw_circle(160.0, 160.0, 20.0, game.GREEN)
+    game.draw_circle_outline(160.0, 160.0, 30.0, game.WHITE, 1.0)
+    game.draw_line(0.0, 0.0, 320.0, 240.0, game.BLUE, 2.0)
+    game.draw_text(f"frame {frames} dt={game.delta()}", 8.0, 8.0, 14, game.WHITE)
+    game.flip()
+    frames = frames + 1
+end
+game.quit()
+print("ok")

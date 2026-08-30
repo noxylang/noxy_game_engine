@@ -1,6 +1,6 @@
 module github.com/estevaofon/noxy_game_engine
 
-go 1.26.6
+go 1.25.0
 
 require (
 	github.com/estevaofon/noxy/sdk/noxyplugin v0.1.0
