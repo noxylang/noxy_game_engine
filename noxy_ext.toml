@@ -1,0 +1,35 @@
+name = "game"
+abi = 1
+kind = "process"
+min_noxy = "0.23.0"
+concurrency = "single"          # um jogo, um loop: uma chamada por vez
+capabilities = ["display", "fs"] # abre uma janela; load_image le arquivos
+
+[binaries]                      # release assets; noxy --get baixa o do seu OS/arch
+windows-amd64 = "noxy-plugin-game-windows-amd64.exe"
+linux-amd64   = "noxy-plugin-game-linux-amd64"
+darwin-amd64  = "noxy-plugin-game-darwin-amd64"
+darwin-arm64  = "noxy-plugin-game-darwin-arm64"
+
+[[export]]
+name = "game_init"              # (width, height, title): abre a janela
+params = ["int", "int", "string"]
+returns = "void"
+stateful = true
+
+[[export]]
+name = "game_flip"              # (commands): mostra o frame, espera o proximo tick, devolve o input
+params = ["any[]"]
+returns = "map[string]any"
+timeout_ms = 10000
+
+[[export]]
+name = "game_load_image"        # (path) -> {"id", "width", "height"}
+params = ["string"]
+returns = "map[string]any"
+stateful = true
+
+[[export]]
+name = "game_quit"
+params = []
+returns = "void"
