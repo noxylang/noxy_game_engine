@@ -1,0 +1,75 @@
+// showcase.nx — the v0.3 additions on one screen: polygons in a world you
+// pan with the arrow keys (camera), the mouse wheel scrolling a value, a
+// name field fed by text_input(), F for fullscreen, and point_in_rect
+// lighting up a box under the cursor.
+// Run from the repository root: noxy examples/showcase.nx
+use github_com.estevaofon.noxy_game_engine as game
+use strings
+
+let W = 640.0
+let H = 400.0
+
+game.init(640, 400, "Showcase")
+game.set_fps(60)
+
+let cam_x = 0.0
+let cam_y = 0.0
+let name = ""
+let wheel_total = 0.0
+let full = false
+
+// a few shapes scattered in world space
+let tri: float[] = [100.0, 100.0, 180.0, 100.0, 140.0, 40.0]
+let diamond: float[] = [320.0, 60.0, 380.0, 120.0, 320.0, 180.0, 260.0, 120.0]
+let box_x = 420.0
+let box_y = 80.0
+let box_w = 120.0
+let box_h = 90.0
+
+while game.running() do
+    if game.key_pressed("escape") then
+        game.stop()
+    end
+    if game.key_pressed("f") then
+        full = !full
+        game.set_fullscreen(full)
+    end
+    let dt: float = game.delta()
+    let speed = 200.0 * dt
+    if game.key_down("left") then cam_x = cam_x - speed end
+    if game.key_down("right") then cam_x = cam_x + speed end
+    if game.key_down("up") then cam_y = cam_y - speed end
+    if game.key_down("down") then cam_y = cam_y + speed end
+    wheel_total = wheel_total + game.wheel_y()
+    let typed: string = game.text_input()
+    name = name + typed
+    if game.key_pressed("backspace") && length(name) > 0 then
+        name = strings.substring(name, 0, length(name) - 1)
+    end
+
+    // the mouse in world coordinates: screen position plus the camera offset
+    let m: game.Point = game.mouse_pos()
+    let mx = to_float(m.x) + cam_x
+    let my = to_float(m.y) + cam_y
+    let hot: bool = game.point_in_rect(mx, my, box_x, box_y, box_w, box_h)
+
+    game.clear(game.rgb(24, 26, 34))
+
+    game.camera_set(cam_x, cam_y)
+    game.draw_polygon(tri, game.rgb(220, 90, 70))
+    game.draw_polygon_outline(diamond, game.rgb(120, 200, 255), 3.0)
+    let box_color: game.Color = game.rgba(90, 200, 120, 120)
+    if hot then
+        box_color = game.rgba(90, 200, 120, 220)
+    end
+    game.draw_rect(box_x, box_y, box_w, box_h, box_color)
+    game.draw_text("world space", box_x + 8.0, box_y + 8.0, 14, game.WHITE)
+    game.camera_reset()
+
+    game.draw_rect(0.0, H - 90.0, W, 90.0, game.rgba(0, 0, 0, 160))
+    game.draw_text("arrows pan · wheel scrolls · type a name · F fullscreen · Escape quits", 12.0, H - 80.0, 14, game.WHITE)
+    game.draw_text(f"camera {to_int(cam_x)},{to_int(cam_y)}   wheel {to_int(wheel_total)}   pads {game.gamepad_count()}", 12.0, H - 56.0, 14, game.rgb(180, 180, 200))
+    game.draw_text(f"name: {name}_", 12.0, H - 32.0, 16, game.YELLOW)
+    game.flip()
+end
+game.quit()
