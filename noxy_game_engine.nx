@@ -1,17 +1,25 @@
 // noxy_game_engine.nx — typed wrapper over the `game` process extension.
 //
-// The natives (game_init, game_flip, game_load_image, game_quit) are
-// registered by the VM from noxy_ext.toml when this module is imported; the
-// binary in bin/ starts on the first call. Draw calls only append to a
-// per-frame command list; flip() sends the whole frame in ONE call, waits
-// for the next 60 Hz tick and refreshes the input snapshot read by key_down,
-// mouse_pos, running, ... A failure inside the extension is a runtime error
-// (`extension 'game' failed: <message>`), capturable with call_result.
+// The natives (game_init, game_flip, game_load_image, game_quit,
+// game_text_width, game_load_sound, game_play_sound, game_play_music,
+// game_stop_music, game_set_volume) are registered by the VM from
+// noxy_ext.toml when this module is imported; the binary in bin/ starts on
+// the first call. Draw calls only append to a per-frame command list;
+// flip() sends the whole frame in ONE call, waits for the next 60 Hz tick
+// and refreshes the input snapshot read by key_down, mouse_pos, running,
+// ... Audio and text_width are direct calls, outside the frame batch. A
+// failure inside the extension is a runtime error (`extension 'game'
+// failed: <message>`), capturable with call_result.
 
 struct Color
     r: int
     g: int
     b: int
+    a: int
+end
+
+struct Sound
+    id: int
 end
 
 struct Image
@@ -25,15 +33,21 @@ struct Point
     y: int
 end
 
-let BLACK: Color = Color(0, 0, 0)
-let WHITE: Color = Color(255, 255, 255)
-let RED: Color = Color(255, 0, 0)
-let GREEN: Color = Color(0, 255, 0)
-let BLUE: Color = Color(0, 0, 255)
-let YELLOW: Color = Color(255, 255, 0)
+let BLACK: Color = Color(0, 0, 0, 255)
+let WHITE: Color = Color(255, 255, 255, 255)
+let RED: Color = Color(255, 0, 0, 255)
+let GREEN: Color = Color(0, 255, 0, 255)
+let BLUE: Color = Color(0, 0, 255, 255)
+let YELLOW: Color = Color(255, 255, 0, 255)
 
+// rgb builds an opaque color.
 func rgb(r: int, g: int, b: int) -> Color
-    return Color(r, g, b)
+    return Color(r, g, b, 255)
+end
+
+// rgba: alpha goes from 0 (transparent) to 255 (opaque).
+func rgba(r: int, g: int, b: int, a: int) -> Color
+    return Color(r, g, b, a)
 end
 
 // module state: the frame being built and the last input snapshot
@@ -105,33 +119,40 @@ end
 // ---- drawing (queued until flip) ----
 
 func clear(c: Color) -> void
-    append(ref _cmds, ["clear", c.r, c.g, c.b])
+    append(ref _cmds, ["clear", c.r, c.g, c.b, c.a])
 end
 
 func draw_rect(x: float, y: float, w: float, h: float, c: Color) -> void
-    append(ref _cmds, ["rect", x, y, w, h, c.r, c.g, c.b, 0])
+    append(ref _cmds, ["rect", x, y, w, h, c.r, c.g, c.b, c.a, 0])
 end
 
 func draw_rect_outline(x: float, y: float, w: float, h: float, c: Color, thickness: float) -> void
-    append(ref _cmds, ["rect", x, y, w, h, c.r, c.g, c.b, thickness])
+    append(ref _cmds, ["rect", x, y, w, h, c.r, c.g, c.b, c.a, thickness])
 end
 
 func draw_circle(cx: float, cy: float, radius: float, c: Color) -> void
-    append(ref _cmds, ["circle", cx, cy, radius, c.r, c.g, c.b, 0])
+    append(ref _cmds, ["circle", cx, cy, radius, c.r, c.g, c.b, c.a, 0])
 end
 
 func draw_circle_outline(cx: float, cy: float, radius: float, c: Color, thickness: float) -> void
-    append(ref _cmds, ["circle", cx, cy, radius, c.r, c.g, c.b, thickness])
+    append(ref _cmds, ["circle", cx, cy, radius, c.r, c.g, c.b, c.a, thickness])
 end
 
 func draw_line(x1: float, y1: float, x2: float, y2: float, c: Color, thickness: float) -> void
-    append(ref _cmds, ["line", x1, y1, x2, y2, c.r, c.g, c.b, thickness])
+    append(ref _cmds, ["line", x1, y1, x2, y2, c.r, c.g, c.b, c.a, thickness])
 end
 
 // draw_text draws `s` with its top-left corner at (x, y), `size` px high,
 // in the built-in Go Regular font.
 func draw_text(s: string, x: float, y: float, size: int, c: Color) -> void
-    append(ref _cmds, ["text", s, x, y, size, c.r, c.g, c.b])
+    append(ref _cmds, ["text", s, x, y, size, c.r, c.g, c.b, c.a])
+end
+
+// text_width measures `s` in px in the built-in font, the same metric
+// draw_text uses. In a hot loop, measure once and keep the result.
+func text_width(s: string, size: int) -> float
+    let w: float = game_text_width(s, size)
+    return w
 end
 
 // load_image decodes a PNG or JPEG (path relative to the working directory).
@@ -146,13 +167,57 @@ end
 
 // draw_image draws img with its top-left corner at (x, y), unscaled.
 func draw_image(img: Image, x: float, y: float) -> void
-    append(ref _cmds, ["image", img.id, x, y, 1.0, 0.0])
+    append(ref _cmds, ["image", img.id, 0, 0, img.width, img.height, x, y, 1.0, 0.0, 1.0, false])
 end
 
 // draw_image_ex scales img by `scale` and rotates it `angle_deg` degrees
 // around the center of the scaled image; (x, y) is the top-left corner.
-func draw_image_ex(img: Image, x: float, y: float, scale: float, angle_deg: float) -> void
-    append(ref _cmds, ["image", img.id, x, y, scale, angle_deg])
+// `opacity` goes from 0 to 1; `flip_x` mirrors the image horizontally
+// (before the rotation).
+func draw_image_ex(img: Image, x: float, y: float, scale: float, angle_deg: float, opacity: float, flip_x: bool) -> void
+    append(ref _cmds, ["image", img.id, 0, 0, img.width, img.height, x, y, scale, angle_deg, opacity, flip_x])
+end
+
+// draw_image_sub draws the (sx, sy, sw, sh) rectangle of img — one frame of
+// a sprite sheet — with its top-left corner at (x, y).
+func draw_image_sub(img: Image, sx: float, sy: float, sw: float, sh: float, x: float, y: float) -> void
+    append(ref _cmds, ["image", img.id, sx, sy, sw, sh, x, y, 1.0, 0.0, 1.0, false])
+end
+
+// draw_image_sub_ex: a sprite sheet frame with scale, rotation, opacity and
+// horizontal flip.
+func draw_image_sub_ex(img: Image, sx: float, sy: float, sw: float, sh: float, x: float, y: float, scale: float, angle_deg: float, opacity: float, flip_x: bool) -> void
+    append(ref _cmds, ["image", img.id, sx, sy, sw, sh, x, y, scale, angle_deg, opacity, flip_x])
+end
+
+// ---- audio (direct calls; they do not go through the frame) ----
+
+// load_sound decodes a whole WAV or OGG file into memory.
+func load_sound(path: string) -> Sound
+    let info: map[string, any] = game_load_sound(path)
+    let id: int = info["id"]
+    return Sound(id)
+end
+
+// play plays the sound from the start; sounds overlap freely.
+func play(s: Sound) -> void
+    game_play_sound(s.id)
+end
+
+// play_music streams a WAV/OGG file in a loop until stop_music. Calling it
+// with music already playing switches to the new track.
+func play_music(path: string) -> void
+    game_play_music(path)
+end
+
+func stop_music() -> void
+    game_stop_music()
+end
+
+// set_volume sets the global volume (0..1). It applies to the music right
+// away and to the next play(); sounds already playing keep their volume.
+func set_volume(v: float) -> void
+    game_set_volume(v)
 end
 
 // ---- input (snapshot taken by the last flip) ----
