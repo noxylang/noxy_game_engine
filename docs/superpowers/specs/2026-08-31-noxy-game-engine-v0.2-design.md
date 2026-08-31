@@ -149,10 +149,11 @@ também.
   `sw`/`sh` ≤ 0, aridade antiga de `image` (6) agora é erro.
 - `engine_test.go`: validação de sub-retângulo contra as dimensões da
   imagem registrada (junto do teste de id inválido existente).
-- `audio_test.go` (novo, headless): decodificação WAV e OGG de
-  `testdata/*.wav`/`.ogg` pequenos (gerados e commitados), detecção por
-  conteúdo, erro em arquivo inválido, registro de ids, `play` de id
-  desconhecido, volume fora de 0..1 — tudo sem criar `audio.Context`.
+- `audio_test.go` (novo, headless): decodificação de um WAV gerado em
+  código no próprio teste (não há encoder OGG puro-Go, então o caminho
+  vorbis é testado pela detecção do prefixo `OggS` com payload inválido),
+  erro em arquivo inválido, registro de ids, `play` de id desconhecido,
+  volume fora de 0..1 — tudo sem criar `audio.Context`.
 - `font_test.go` (novo): `textWidth("", n) == 0`, largura cresce com a
   string e com o size, acesso concorrente ao cache (com `-race`).
 - Manual: `smoke.nx` continua o teste de instalação; exemplos novos abaixo.
