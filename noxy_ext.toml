@@ -35,9 +35,15 @@ params = []
 returns = "void"
 
 [[export]]
-name = "game_text_width"        # (s, size) -> largura em px na fonte embutida
-params = ["string", "int"]
+name = "game_text_width"        # (s, size, font_id) -> largura em px
+params = ["string", "int", "int"]
 returns = "float"
+
+[[export]]
+name = "game_load_font"         # (path) -> {"id"}; TTF ou OTF
+params = ["string"]
+returns = "map[string]any"
+stateful = true
 
 [[export]]
 name = "game_load_sound"        # (path) -> {"id"}; WAV ou OGG inteiro na memoria

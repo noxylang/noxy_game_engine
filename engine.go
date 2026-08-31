@@ -170,6 +170,14 @@ func (e *engine) handleFlip(ctx context.Context, raw []any) (map[string]any, err
 		return nil, errClosed
 	}
 	for i, c := range cmds {
+		if c.kind == cmdText {
+			// ordem de locks: sempre e.mu -> fontMu
+			if !fontExists(c.font) {
+				e.mu.Unlock()
+				return nil, fmt.Errorf("command %d: unknown font %d (not returned by load_font)", i, c.font)
+			}
+			continue
+		}
 		if c.kind != cmdImage {
 			continue
 		}

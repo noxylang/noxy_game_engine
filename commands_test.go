@@ -11,7 +11,7 @@ func TestDecodeFrameAllTags(t *testing.T) {
 		[]any{"rect", 1.5, int64(2), 3.0, 4.0, int64(255), int64(0), int64(0), int64(255), int64(0)},
 		[]any{"circle", 10.0, 20.0, 5.0, int64(0), int64(255), int64(0), int64(255), 2.0},
 		[]any{"line", 0.0, 0.0, 9.0, 9.0, int64(0), int64(0), int64(255), int64(255), 1.0},
-		[]any{"text", "hi", 3.0, 4.0, int64(16), int64(9), int64(9), int64(9), int64(255)},
+		[]any{"text", "hi", 3.0, 4.0, int64(16), int64(9), int64(9), int64(9), int64(255), int64(0)},
 		[]any{"image", int64(7), 0.0, 0.0, 32.0, 32.0, 1.0, 2.0, 2.0, 90.0, 1.0, false},
 	}
 	cmds, err := decodeFrame(raw)
@@ -108,7 +108,7 @@ func TestDecodeFrameErrors(t *testing.T) {
 		{"number type", []any{[]any{"clear", int64(1), int64(2), int64(3), int64(255)}, []any{"rect", "x", 1.0, 1.0, 1.0, int64(0), int64(0), int64(0), int64(255), int64(0)}}, `command 1: element 1 of "rect": expected number, got string`},
 		{"color range", []any{[]any{"clear", int64(300), int64(0), int64(0), int64(255)}}, `command 0: element 1 of "clear": color component out of range 0..255, got 300`},
 		{"color float", []any{[]any{"clear", 1.5, int64(0), int64(0), int64(255)}}, `command 0: element 1 of "clear": color component must be an int, got float`},
-		{"text type", []any{[]any{"text", int64(1), 0.0, 0.0, int64(12), int64(0), int64(0), int64(0), int64(255)}}, `command 0: element 1 of "text": expected string, got int`},
+		{"text type", []any{[]any{"text", int64(1), 0.0, 0.0, int64(12), int64(0), int64(0), int64(0), int64(255), int64(0)}}, `command 0: element 1 of "text": expected string, got int`},
 		{"image id type", []any{[]any{"image", "a", 0.0, 0.0, 8.0, 8.0, 0.0, 0.0, 1.0, 0.0, 1.0, false}}, `command 0: element 1 of "image": expected int, got string`},
 		{"negative thickness", []any{[]any{"line", 0.0, 0.0, 1.0, 1.0, int64(0), int64(0), int64(0), int64(255), -1.0}}, `command 0: element 9 of "line": thickness must not be negative, got -1`},
 	}
@@ -143,5 +143,22 @@ func TestDecodeOldColorArityRejected(t *testing.T) {
 	_, err := decodeFrame([]any{[]any{"clear", int64(0), int64(0), int64(0)}})
 	if err == nil || !strings.Contains(err.Error(), `"clear" expects 5 elements, got 4`) {
 		t.Fatalf("want arity error, got %v", err)
+	}
+}
+
+func TestDecodeTextFont(t *testing.T) {
+	cmds, err := decodeFrame([]any{[]any{"text", "hi", 1.0, 2.0, int64(16), int64(1), int64(2), int64(3), int64(255), int64(7)}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cmds[0].font != 7 {
+		t.Fatalf("want font 7, got %+v", cmds[0])
+	}
+}
+
+func TestDecodeTextFontType(t *testing.T) {
+	_, err := decodeFrame([]any{[]any{"text", "hi", 1.0, 2.0, int64(16), int64(1), int64(2), int64(3), int64(255), "x"}})
+	if err == nil || !strings.Contains(err.Error(), `element 9 of "text": expected int, got string`) {
+		t.Fatalf("want font type error, got %v", err)
 	}
 }

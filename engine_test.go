@@ -159,6 +159,18 @@ func TestFlipRejectsBadFrameWithoutReplacingCurrent(t *testing.T) {
 	}
 }
 
+func TestFlipRejectsUnknownFont(t *testing.T) {
+	e := startedEngine(t)
+	frame := []any{[]any{"text", "hi", 0.0, 0.0, int64(16), int64(0), int64(0), int64(0), int64(255), int64(4242)}}
+	_, err := e.handleFlip(context.Background(), frame)
+	if err == nil || !strings.Contains(err.Error(), "command 0: unknown font 4242 (not returned by load_font)") {
+		t.Fatalf("want unknown font error, got %v", err)
+	}
+	if e.hasPendingFrame() {
+		t.Fatal("frame inválido não deve ficar pendente")
+	}
+}
+
 func TestFlipRejectsSourceRectOutsideImage(t *testing.T) {
 	e := startedEngine(t)
 	e.images[2] = &imageEntry{src: image.NewRGBA(image.Rect(0, 0, 64, 32))}

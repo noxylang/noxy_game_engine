@@ -23,7 +23,7 @@ type color4 struct{ R, G, B, A uint8 }
 //	rect:   x y w h color thickness (0 = preenchido)
 //	circle: x y (centro) w (raio) color thickness
 //	line:   x y (início) w h (fim) color thickness
-//	text:   text x y size color
+//	text:   text x y size color font (0 = embutida)
 //	image:  image srcX srcY srcW srcH x y scale angle (graus) opacity flipX
 type command struct {
 	kind                                      cmdKind
@@ -32,12 +32,12 @@ type command struct {
 	srcX, srcY, srcW, srcH, opacity           float64
 	flipX                                     bool
 	text                                      string
-	image                                     int64
+	image, font                               int64
 }
 
 // arity é o tamanho exato (tag incluída) de cada comando.
 var arity = map[string]int{
-	"clear": 5, "rect": 10, "circle": 9, "line": 10, "text": 9, "image": 12,
+	"clear": 5, "rect": 10, "circle": 9, "line": 10, "text": 10, "image": 12,
 }
 
 func decodeFrame(raw []any) ([]command, error) {
@@ -97,6 +97,7 @@ func decodeCommand(item any) (command, error) {
 		c.text = r.str(1)
 		c.x, c.y, c.size = r.num(2), r.num(3), r.num(4)
 		c.color = r.color(5)
+		c.font = r.integer(9)
 	case "image":
 		c.kind = cmdImage
 		c.image = r.integer(1)

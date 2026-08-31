@@ -22,7 +22,8 @@ func main() {
 	p.Handle("game_flip", noxyplugin.Func1(e.handleFlip))
 	p.Handle("game_load_image", noxyplugin.Func1(e.handleLoadImage))
 	p.Handle("game_quit", noxyplugin.Func0(e.handleQuit))
-	p.Handle("game_text_width", noxyplugin.Func2(handleTextWidth))
+	p.Handle("game_text_width", noxyplugin.Func3(handleTextWidth))
+	p.Handle("game_load_font", noxyplugin.Func1(handleLoadFont))
 
 	a := newAudioEngine() // independente da janela: não exige game_init
 	p.Handle("game_load_sound", noxyplugin.Func1(a.handleLoadSound))
@@ -45,10 +46,20 @@ func main() {
 	select {} // a janela fechou; o processo vive até o host fechar o stdin
 }
 
-// handleTextWidth: game_text_width(s, size) -> float. Não exige game_init.
-func handleTextWidth(ctx context.Context, s string, size int64) (float64, error) {
+// handleTextWidth: game_text_width(s, size, font_id) -> float. Não exige
+// game_init.
+func handleTextWidth(ctx context.Context, s string, size, fontID int64) (float64, error) {
 	if size <= 0 {
 		return 0, fmt.Errorf("size must be positive, got %d", size)
 	}
-	return textWidth(s, float64(size), 0)
+	return textWidth(s, float64(size), fontID)
+}
+
+// handleLoadFont: game_load_font(path) -> {"id"}. Aceita TTF e OTF.
+func handleLoadFont(ctx context.Context, path string) (map[string]any, error) {
+	id, err := loadFont(path)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"id": id}, nil
 }
