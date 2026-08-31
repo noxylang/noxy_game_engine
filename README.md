@@ -181,19 +181,40 @@ key is Ebitengine's name in lower case (`"home"`, `"pageup"`, `"comma"`...).
 | Function | Description |
 |---|---|
 | `gamepad_count() -> int` | How many controllers are connected. Pads are numbered `0` to `gamepad_count() - 1` |
+| `gamepad_name(pad: int) -> string` | What the system calls the controller (`""` for a pad that is not connected) |
+| `gamepad_standard(pad: int) -> bool` | Whether this controller has a known layout — which decides the button names below |
 | `gamepad_down(pad: int, button: string) -> bool` | The button is held |
 | `gamepad_pressed(pad: int, button: string) -> bool` | The button went down during the last frame |
 | `gamepad_axis(pad: int, axis: string) -> float` | Axis value; an unknown axis or a missing controller gives `0.0` |
-
-Button names: `"a"` `"b"` `"x"` `"y"` (the right cluster, bottom/right/left/
-top), `"up"` `"down"` `"left"` `"right"` (d-pad), `"start"` `"back"`
-`"guide"`, `"lb"` `"rb"` (shoulders), `"lt"` `"rt"` (triggers, also readable
-as axes), `"lstick"` `"rstick"` (stick clicks). Axis names: `"left_x"`
-`"left_y"` `"right_x"` `"right_y"` (−1..1) and `"lt"` `"rt"` (0..1).
+| `gamepad_buttons() -> string[]` | Every button held right now, as `"<pad>:<button>"` — the quickest way to learn an unmapped controller's numbers |
+| `add_gamepad_mapping(lines: string)` | Teaches the engine a controller it does not know (see below) |
 
 The numbering follows the order controllers are connected, so the first one
-is always pad `0`. Controllers Ebitengine has no standard layout for are
-ignored — they do not show up in `gamepad_count()`.
+is always pad `0`.
+
+**Controllers with a known layout** (`gamepad_standard(pad)` is `true`) use
+names: `"a"` `"b"` `"x"` `"y"` (the right cluster, bottom/right/left/top),
+`"up"` `"down"` `"left"` `"right"` (d-pad), `"start"` `"back"` `"guide"`,
+`"lb"` `"rb"` (shoulders), `"lt"` `"rt"` (triggers, also readable as axes),
+`"lstick"` `"rstick"` (stick clicks). Axes: `"left_x"` `"left_y"`
+`"right_x"` `"right_y"` (−1..1) and `"lt"` `"rt"` (0..1).
+
+**Controllers without one** — many generic USB pads — still work, with the
+raw names the device reports: buttons `"b0"`, `"b1"`, ... and axes `"a0"`,
+`"a1"`, ... Which number is which button varies by device, so print
+`gamepad_buttons()` while pressing them (that is what `showcase.nx` shows on
+its bottom line) and use the numbers you see.
+
+To get the nice names on such a controller, pass it a mapping line in
+[SDL_GameControllerDB](https://github.com/gabomdq/SDL_GameControllerDB)
+format — look yours up by the GUID, or write one — before the loop:
+
+```noxy
+game.add_gamepad_mapping("03000000790000000600000000000000,My Pad,platform:Windows,a:b2,b:b1,x:b3,y:b0,start:b9,back:b8,leftx:a0,lefty:a1,")
+```
+
+From then on `gamepad_standard(0)` is `true` and the standard names work. It
+raises if the text does not parse.
 
 ### Camera and collision
 

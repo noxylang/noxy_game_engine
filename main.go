@@ -26,6 +26,7 @@ func main() {
 	p.Handle("game_load_font", noxyplugin.Func1(handleLoadFont))
 	p.Handle("game_set_fullscreen", noxyplugin.Func1(e.handleSetFullscreen))
 	p.Handle("game_set_fps", noxyplugin.Func1(e.handleSetFps))
+	p.Handle("game_add_gamepad_mapping", noxyplugin.Func1(handleAddGamepadMapping))
 
 	a := newAudioEngine() // independente da janela: não exige game_init
 	p.Handle("game_load_sound", noxyplugin.Func1(a.handleLoadSound))
@@ -55,6 +56,20 @@ func handleTextWidth(ctx context.Context, s string, size, fontID int64) (float64
 		return 0, fmt.Errorf("size must be positive, got %d", size)
 	}
 	return textWidth(s, float64(size), fontID)
+}
+
+// handleAddGamepadMapping: game_add_gamepad_mapping(linha) -> void. Uma ou
+// mais linhas no formato do SDL_GameControllerDB, para controles que o
+// Ebiten ainda não conhece. Não exige game_init.
+func handleAddGamepadMapping(ctx context.Context, mappings string) (any, error) {
+	ok, err := ebiten.UpdateStandardGamepadLayoutMappings(mappings)
+	if err != nil {
+		return nil, fmt.Errorf("gamepad mapping: %w", err)
+	}
+	if !ok {
+		return nil, fmt.Errorf("gamepad mapping was not applied (check the SDL_GameControllerDB line)")
+	}
+	return nil, nil
 }
 
 // handleLoadFont: game_load_font(path) -> {"id"}. Aceita TTF e OTF.

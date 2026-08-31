@@ -2,6 +2,7 @@
 //
 // The natives (game_init, game_flip, game_load_image, game_quit,
 // game_text_width, game_load_font, game_set_fullscreen, game_set_fps,
+// game_add_gamepad_mapping,
 // game_load_sound, game_play_sound, game_play_music, game_stop_music,
 // game_set_volume) are registered by the VM from noxy_ext.toml when this
 // module is imported; the binary in bin/ starts on the first call. The
@@ -69,9 +70,13 @@ let _mouse_pressed: string[] = []
 let _wheel_x: float = 0.0
 let _wheel_y: float = 0.0
 let _text_input: string = ""
+let _pad_count: int = 0
+let _pad_names: string[] = []
+let _pad_kinds: string[] = []
 let _pad_down: string[] = []
 let _pad_pressed: string[] = []
-let _pad_axes: float[] = []
+let _pad_axis_names: string[] = []
+let _pad_axis_values: float[] = []
 let _font: int = 0             // 0 = built-in font
 let _cam_x: float = 0.0
 let _cam_y: float = 0.0
@@ -130,12 +135,20 @@ func flip() -> void
     _wheel_y = wy
     let ti: string = snap["text_input"]
     _text_input = ti
+    let pc: int = snap["pad_count"]
+    _pad_count = pc
+    let pn: string[] = snap["pad_names"]
+    _pad_names = pn
+    let pk: string[] = snap["pad_kinds"]
+    _pad_kinds = pk
     let pd: string[] = snap["pad_down"]
     _pad_down = pd
     let pp: string[] = snap["pad_pressed"]
     _pad_pressed = pp
-    let pa: float[] = snap["pad_axes"]
-    _pad_axes = pa
+    let pan: string[] = snap["pad_axis_names"]
+    _pad_axis_names = pan
+    let pav: float[] = snap["pad_axis_values"]
+    _pad_axis_values = pav
 end
 
 // delta is the time in seconds between the last two flips.
@@ -410,15 +423,35 @@ func text_input() -> string
     return _text_input
 end
 
-// gamepad_count: how many controllers with a standard layout are connected.
-// Pad numbers go from 0 to gamepad_count() - 1.
+// gamepad_count: how many controllers are connected. Pad numbers go from 0
+// to gamepad_count() - 1.
 func gamepad_count() -> int
-    return length(_pad_axes) / 6
+    return _pad_count
 end
 
-// gamepad_down: the button is held. Names: "a" "b" "x" "y", "up" "down"
-// "left" "right", "start" "back" "guide", "lb" "rb" "lt" "rt", "lstick"
-// "rstick".
+// gamepad_name: what the system calls the controller, "" for a pad number
+// that is not connected.
+func gamepad_name(pad: int) -> string
+    if pad < 0 || pad >= length(_pad_names) then
+        return ""
+    end
+    return _pad_names[pad]
+end
+
+// gamepad_standard: true when the controller has a known layout, so its
+// buttons answer to "a", "start", "left_x". When false the controller still
+// works, but with raw names ("b0".., "a0"..) — see add_gamepad_mapping.
+func gamepad_standard(pad: int) -> bool
+    if pad < 0 || pad >= length(_pad_kinds) then
+        return false
+    end
+    return _pad_kinds[pad] == "standard"
+end
+
+// gamepad_down: the button is held. On a standard controller: "a" "b" "x"
+// "y", "up" "down" "left" "right", "start" "back" "guide", "lb" "rb" "lt"
+// "rt", "lstick" "rstick". On a controller without a known layout the names
+// are the raw indices, "b0" to "bN".
 func gamepad_down(pad: int, button: string) -> bool
     return _has(_pad_down, f"{pad}:{button}")
 end
@@ -428,26 +461,31 @@ func gamepad_pressed(pad: int, button: string) -> bool
     return _has(_pad_pressed, f"{pad}:{button}")
 end
 
-// gamepad_axis: "left_x" "left_y" "right_x" "right_y" (-1..1) or "lt" "rt"
-// (0..1). Unknown axis or missing controller gives 0.0.
+// gamepad_axis: on a standard controller "left_x" "left_y" "right_x"
+// "right_y" (-1..1) and "lt" "rt" (0..1); otherwise the raw axes "a0" to
+// "aN". An unknown axis or a missing controller gives 0.0.
 func gamepad_axis(pad: int, axis: string) -> float
-    let idx = _axis_index(axis)
-    if idx < 0 || pad < 0 then
-        return 0.0
+    let key = f"{pad}:{axis}"
+    let i = 0
+    while i < length(_pad_axis_names) do
+        if _pad_axis_names[i] == key then
+            return _pad_axis_values[i]
+        end
+        i = i + 1
     end
-    let at = pad * 6 + idx
-    if at >= length(_pad_axes) then
-        return 0.0
-    end
-    return _pad_axes[at]
+    return 0.0
 end
 
-func _axis_index(axis: string) -> int
-    if axis == "left_x" then return 0 end
-    if axis == "left_y" then return 1 end
-    if axis == "right_x" then return 2 end
-    if axis == "right_y" then return 3 end
-    if axis == "lt" then return 4 end
-    if axis == "rt" then return 5 end
-    return -1
+// gamepad_buttons: every button held right now, as "<pad>:<button>" — handy
+// to discover the raw numbers of an unmapped controller.
+func gamepad_buttons() -> string[]
+    return _pad_down
+end
+
+// add_gamepad_mapping teaches the engine a controller it does not know, so
+// its buttons get the standard names. `lines` is one or more lines in
+// SDL_GameControllerDB format (https://github.com/gabomdq/SDL_GameControllerDB).
+// Raises if the text does not parse.
+func add_gamepad_mapping(lines: string) -> void
+    game_add_gamepad_mapping(lines)
 end

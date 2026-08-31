@@ -52,6 +52,12 @@ returns = "void"
 stateful = true
 
 [[export]]
+name = "game_add_gamepad_mapping"  # (linhas SDL_GameControllerDB): nomeia botoes de controles desconhecidos
+params = ["string"]
+returns = "void"
+stateful = true
+
+[[export]]
 name = "game_set_fps"           # (n >= 1): ticks por segundo (padrao 60)
 params = ["int"]
 returns = "void"

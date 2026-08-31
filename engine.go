@@ -31,7 +31,7 @@ type inputReader interface {
 	mouse() (x, y int, down, pressed []string)
 	wheel() (x, y float64)
 	textInput() string
-	pads() (down, pressed []string, axes []float64)
+	pads() padData
 	windowClosing() bool
 }
 
@@ -53,26 +53,29 @@ type inputSnapshot struct {
 	MouseDown, MousePressed []string
 	WheelX, WheelY          float64
 	TextInput               string
-	PadDown, PadPressed     []string
-	PadAxes                 []float64
+	Pads                    padData
 }
 
 func (s inputSnapshot) toMap() map[string]any {
 	return map[string]any{
-		"closed":        s.Closed,
-		"dt":            s.DT,
-		"keys_down":     nonNil(s.KeysDown),
-		"keys_pressed":  nonNil(s.KeysPressed),
-		"mouse_x":       int64(s.MouseX),
-		"mouse_y":       int64(s.MouseY),
-		"mouse_down":    nonNil(s.MouseDown),
-		"mouse_pressed": nonNil(s.MousePressed),
-		"wheel_x":       s.WheelX,
-		"wheel_y":       s.WheelY,
-		"text_input":    s.TextInput,
-		"pad_down":      nonNil(s.PadDown),
-		"pad_pressed":   nonNil(s.PadPressed),
-		"pad_axes":      nonNilF(s.PadAxes),
+		"closed":          s.Closed,
+		"dt":              s.DT,
+		"keys_down":       nonNil(s.KeysDown),
+		"keys_pressed":    nonNil(s.KeysPressed),
+		"mouse_x":         int64(s.MouseX),
+		"mouse_y":         int64(s.MouseY),
+		"mouse_down":      nonNil(s.MouseDown),
+		"mouse_pressed":   nonNil(s.MousePressed),
+		"wheel_x":         s.WheelX,
+		"wheel_y":         s.WheelY,
+		"text_input":      s.TextInput,
+		"pad_count":       int64(s.Pads.count),
+		"pad_names":       nonNil(s.Pads.names),
+		"pad_kinds":       nonNil(s.Pads.kinds),
+		"pad_down":        nonNil(s.Pads.down),
+		"pad_pressed":     nonNil(s.Pads.pressed),
+		"pad_axis_names":  nonNil(s.Pads.axisNames),
+		"pad_axis_values": nonNilF(s.Pads.axisValues),
 	}
 }
 
@@ -285,7 +288,7 @@ func (e *engine) tick(p platform) (terminate bool) {
 	}
 	mx, my, mdown, mpressed := p.mouse()
 	wx, wy := p.wheel()
-	pdown, ppressed, paxes := p.pads()
+	pads := p.pads()
 	frame.reply <- inputSnapshot{
 		Closed:       closed,
 		DT:           dt,
@@ -298,9 +301,7 @@ func (e *engine) tick(p platform) (terminate bool) {
 		WheelX:       wx,
 		WheelY:       wy,
 		TextInput:    p.textInput(),
-		PadDown:      pdown,
-		PadPressed:   ppressed,
-		PadAxes:      paxes,
+		Pads:         pads,
 	}
 	return false
 }

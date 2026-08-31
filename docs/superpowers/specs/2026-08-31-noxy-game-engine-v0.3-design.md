@@ -111,6 +111,15 @@ Controle sem layout padrão disponível (`IsStandardGamepadLayoutAvailable`
 falso) é ignorado — não entra na contagem nem nos arrays. Documentado no
 README.
 
+> **Revisto na v0.3.1.** Essa regra estava errada na prática: controles
+> genéricos USB (o GUID `03000000790000000600000000000000`, comum) não têm
+> layout padrão na base do Ebiten e sumiam por completo. Desde a v0.3.1 eles
+> entram com nomes brutos (`"b0"`.., `"a0"`..), o snapshot passou a carregar
+> `pad_count`, `pad_names`, `pad_kinds`, `pad_axis_names` e
+> `pad_axis_values` (nomes e valores paralelos, porque a contagem de eixos
+> varia por dispositivo), e existe `add_gamepad_mapping` para carregar uma
+> linha do SDL_GameControllerDB.
+
 Wrapper: `wheel_x() -> float`, `wheel_y() -> float`, `text_input() ->
 string`, `gamepad_count() -> int`, `gamepad_down(pad: int, button: string)
 -> bool`, `gamepad_pressed(pad: int, button: string) -> bool`,

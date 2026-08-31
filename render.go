@@ -146,25 +146,26 @@ func (ebitenInput) textInput() string {
 func (ebitenInput) setFullscreen(on bool) { ebiten.SetFullscreen(on) }
 func (ebitenInput) setTPS(n int)          { ebiten.SetTPS(n) }
 
-func (ebitenInput) pads() ([]string, []string, []float64) {
+func (ebitenInput) pads() padData {
 	return gatherPads(connectedPads())
 }
 
-// ebitenPads lê os controles com layout padrão; a posição na lista é o
-// número do controle visto pelo script.
+// ebitenPads lê os controles conectados; a posição na lista é o número do
+// controle visto pelo script. Controles sem layout padrão entram do mesmo
+// jeito — o gatherPads usa os nomes brutos deles.
 type ebitenPads struct{ ids []ebiten.GamepadID }
 
 func connectedPads() ebitenPads {
-	var out []ebiten.GamepadID
-	for _, id := range ebiten.AppendGamepadIDs(nil) {
-		if ebiten.IsStandardGamepadLayoutAvailable(id) {
-			out = append(out, id)
-		}
-	}
-	return ebitenPads{ids: out}
+	return ebitenPads{ids: ebiten.AppendGamepadIDs(nil)}
 }
 
 func (p ebitenPads) padCount() int { return len(p.ids) }
+
+func (p ebitenPads) padName(pad int) string { return ebiten.GamepadName(p.ids[pad]) }
+
+func (p ebitenPads) standard(pad int) bool {
+	return ebiten.IsStandardGamepadLayoutAvailable(p.ids[pad])
+}
 
 func (p ebitenPads) pressedButtons(pad int) []ebiten.StandardGamepadButton {
 	return inpututil.AppendPressedStandardGamepadButtons(p.ids[pad], nil)
@@ -180,4 +181,20 @@ func (p ebitenPads) axisValue(pad int, a ebiten.StandardGamepadAxis) float64 {
 
 func (p ebitenPads) buttonValue(pad int, b ebiten.StandardGamepadButton) float64 {
 	return ebiten.StandardGamepadButtonValue(p.ids[pad], b)
+}
+
+func (p ebitenPads) rawPressedButtons(pad int) []ebiten.GamepadButton {
+	return inpututil.AppendPressedGamepadButtons(p.ids[pad], nil)
+}
+
+func (p ebitenPads) rawJustPressedButtons(pad int) []ebiten.GamepadButton {
+	return inpututil.AppendJustPressedGamepadButtons(p.ids[pad], nil)
+}
+
+func (p ebitenPads) rawAxisCount(pad int) int {
+	return ebiten.GamepadAxisCount(p.ids[pad])
+}
+
+func (p ebitenPads) rawAxisValue(pad int, axis int) float64 {
+	return ebiten.GamepadAxisValue(p.ids[pad], axis)
 }
