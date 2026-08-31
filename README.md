@@ -14,7 +14,7 @@ darwin/arm64.
 ## Installation
 
 ```bash
-noxy --get github.com/estevaofon/noxy_game_engine@v0.1.0
+noxy --get github.com/estevaofon/noxy_game_engine@v0.2.0
 ```
 
 Without `@version`, `--get` resolves the newest release tag. The package lands
@@ -64,9 +64,11 @@ the frame to the window in **one** call, waits for the next tick (60 Hz, so
 `flip` also paces the game like pygame's `clock.tick(60)`) and refreshes the
 input snapshot that `key_down`, `mouse_pos`, `running` and friends read.
 More in `examples/`: `smoke.nx` (installation check), `bouncing_ball.nx`,
-`pong.nx`, `sprite.nx` (images: plain, scaled, rotating, following the mouse),
-`flappy_bird.nx` (a complete little game: gravity, scrolling pipes, score,
-game over and restart).
+`pong.nx`, `sprite.nx` (images: plain, scaled, rotating, and a
+half-transparent mirrored copy on the mouse), `animation.nx` (a sprite sheet
+walked frame by frame, flipped when it turns around), `flappy_bird.nx` (a
+complete little game: gravity, scrolling pipes, score, sound effects, game
+over and restart).
 
 ## API
 
@@ -98,13 +100,37 @@ accepted where a `float` is expected (`draw_rect(10, 20, 30, 40, c)`).
 | `draw_circle_outline(cx, cy, radius, c: Color, thickness: float)` | Circle outline |
 | `draw_line(x1, y1, x2, y2, c: Color, thickness: float)` | Line segment |
 | `draw_text(s: string, x, y, size: int, c: Color)` | Text with its top-left corner at `(x, y)`, `size` px high, built-in Go Regular font |
+| `text_width(s: string, size: int) -> float` | Width of `s` in px in that same font — for centering. This one *is* a call to the process, so in a hot loop measure once and keep the result |
 | `load_image(path: string) -> Image` | Decodes a PNG or JPEG, relative to the working directory. Raises if missing or not an image |
 | `draw_image(img: Image, x, y)` | Draws the image with its top-left corner at `(x, y)` |
-| `draw_image_ex(img: Image, x, y, scale: float, angle_deg: float)` | Scaled, then rotated around the center of the scaled image |
+| `draw_image_ex(img: Image, x, y, scale: float, angle_deg: float, opacity: float, flip_x: bool)` | Mirrored (if `flip_x`), scaled, then rotated around the center of the scaled image; `opacity` 0–1 |
+| `draw_image_sub(img: Image, sx, sy, sw, sh, x, y)` | Draws the `(sx, sy, sw, sh)` rectangle of `img` — one frame of a sprite sheet — at `(x, y)` |
+| `draw_image_sub_ex(img: Image, sx, sy, sw, sh, x, y, scale, angle_deg, opacity, flip_x)` | A sprite sheet frame with the full transform |
 
-Colors: `Color(r, g, b)` (0–255), `rgb(r, g, b)`, and the constants `BLACK`,
-`WHITE`, `RED`, `GREEN`, `BLUE`, `YELLOW`. `Image` has `id`, `width`,
-`height`.
+Colors: `Color(r, g, b, a)` with components 0–255, `rgb(r, g, b)` (opaque),
+`rgba(r, g, b, a)`, and the constants `BLACK`, `WHITE`, `RED`, `GREEN`,
+`BLUE`, `YELLOW` (all opaque). Alpha works on every primitive and on text,
+so `rgba(0, 0, 0, 180)` is the usual dimming panel; on `clear` it just fills
+with the color. `Image` has `id`, `width`, `height`.
+
+A source rectangle outside the image, an `opacity` outside 0–1 or a
+non-positive `sw`/`sh` is a frame error, like any other bad command.
+
+### Audio
+
+Sound needs no `init` — it works with or without a window. WAV and OGG
+Vorbis are accepted, detected by content rather than by extension.
+
+| Function | Description |
+|---|---|
+| `load_sound(path: string) -> Sound` | Decodes a whole file into memory (use it for short effects). Raises if missing or not audio |
+| `play(s: Sound)` | Plays from the start; sounds overlap freely, and calling it again while it plays layers a second copy |
+| `play_music(path: string)` | Streams the file in an endless loop (so a long track costs no memory). Calling it again switches tracks |
+| `stop_music()` | Stops and releases the music. Idempotent |
+| `set_volume(v: float)` | Global volume 0–1. Applies to the music at once and to the next `play`; sounds already playing keep the volume they started with |
+
+`Sound` has an `id`. Effects decode to PCM at 48 kHz, so a couple of seconds
+costs well under a megabyte; music is best kept as OGG.
 
 ### Input (snapshot taken by the last `flip`)
 
@@ -151,6 +177,10 @@ single `flip`: a frame with a few hundred draw calls is still well under a
 millisecond of transport. The Ebitengine loop keeps running between flips, so
 a slow script frame never freezes the window — it just shows the last frame
 until the next `flip`.
+
+Audio and `text_width` are calls of their own, outside that batch — they are
+occasional, not per-frame. `play` returns immediately (the mixer runs on its
+own), so a sound never costs you a frame.
 
 ## Platforms
 
