@@ -6,6 +6,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -21,6 +22,7 @@ func main() {
 	p.Handle("game_flip", noxyplugin.Func1(e.handleFlip))
 	p.Handle("game_load_image", noxyplugin.Func1(e.handleLoadImage))
 	p.Handle("game_quit", noxyplugin.Func0(e.handleQuit))
+	p.Handle("game_text_width", noxyplugin.Func2(handleTextWidth))
 	go p.Main() // sai do processo (os.Exit) quando o host fecha o stdin
 
 	req := <-e.initReq
@@ -34,4 +36,12 @@ func main() {
 	}
 	e.markQuit()
 	select {} // a janela fechou; o processo vive até o host fechar o stdin
+}
+
+// handleTextWidth: game_text_width(s, size) -> float. Não exige game_init.
+func handleTextWidth(ctx context.Context, s string, size int64) (float64, error) {
+	if size <= 0 {
+		return 0, fmt.Errorf("size must be positive, got %d", size)
+	}
+	return textWidth(s, float64(size)), nil
 }

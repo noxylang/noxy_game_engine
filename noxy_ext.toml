@@ -33,3 +33,8 @@ stateful = true
 name = "game_quit"
 params = []
 returns = "void"
+
+[[export]]
+name = "game_text_width"        # (s, size) -> largura em px na fonte embutida
+params = ["string", "int"]
+returns = "float"
