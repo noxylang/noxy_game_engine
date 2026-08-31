@@ -53,7 +53,7 @@ func (g *game) draw(screen *ebiten.Image, c command) {
 		op := &text.DrawOptions{}
 		op.GeoM.Translate(c.x, c.y)
 		op.ColorScale.ScaleWithColor(clr)
-		drawText(screen, c.text, c.size, op)
+		drawText(screen, c.text, c.size, 0, op)
 	case cmdImage:
 		entry, err := g.e.image(c.image) // ids e recortes validados no flip
 		if err != nil {

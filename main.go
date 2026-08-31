@@ -50,5 +50,5 @@ func handleTextWidth(ctx context.Context, s string, size int64) (float64, error)
 	if size <= 0 {
 		return 0, fmt.Errorf("size must be positive, got %d", size)
 	}
-	return textWidth(s, float64(size)), nil
+	return textWidth(s, float64(size), 0)
 }
