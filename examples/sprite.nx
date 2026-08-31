@@ -1,5 +1,6 @@
 // sprite.nx — loads examples/sprite.png and draws it plain, scaled and
-// rotating; the mouse drags a copy around. Escape quits.
+// rotating; a half-transparent, mirrored copy follows the mouse.
+// Escape quits.
 // Run from the repository root: noxy examples/sprite.nx
 use github_com.estevaofon.noxy_game_engine as game
 
@@ -16,10 +17,10 @@ while game.running() do
 
     game.clear(game.rgb(30, 30, 30))
     game.draw_image(sprite, 20.0, 20.0)
-    game.draw_image_ex(sprite, 100.0, 20.0, 3.0, 0.0)
-    game.draw_image_ex(sprite, 250.0, 100.0, 2.0, angle)
+    game.draw_image_ex(sprite, 100.0, 20.0, 3.0, 0.0, 1.0, false)
+    game.draw_image_ex(sprite, 250.0, 100.0, 2.0, angle, 1.0, false)
     let m: game.Point = game.mouse_pos()
-    game.draw_image(sprite, m.x - 16.0, m.y - 16.0)
+    game.draw_image_ex(sprite, m.x - 16.0, m.y - 16.0, 1.0, 0.0, 0.5, true)
     game.draw_text("Escape to quit", 10.0, 270.0, 14, game.WHITE)
     game.flip()
 end

@@ -24,6 +24,10 @@ let BIRD: game.Color = game.rgb(255, 220, 60)
 
 game.init(400, 600, "Flappy Bird")
 
+let SND_FLAP: game.Sound = game.load_sound("examples/flap.wav")
+let SND_SCORE: game.Sound = game.load_sound("examples/score.wav")
+let SND_HIT: game.Sound = game.load_sound("examples/hit.wav")
+
 let bird_y = H / 2.0
 let bird_vy = 0.0
 let pipe_x: float[] = []       // left edge of each pipe pair
@@ -86,6 +90,7 @@ func update(dt: float) -> void
         if !pipe_passed[i] && pipe_x[i] + PIPE_W < BIRD_X then
             pipe_passed[i] = true
             score = score + 1
+            game.play(SND_SCORE)
         end
         if hits(i) then
             alive = false
@@ -104,7 +109,9 @@ func update(dt: float) -> void
     if bird_y + BIRD_R > H - GROUND || bird_y - BIRD_R < 0.0 then
         alive = false
     end
+    // update only runs while alive, so this fires exactly once per death
     if !alive then
+        game.play(SND_HIT)
         if score > best then best = score end
     end
 end
@@ -130,15 +137,20 @@ func draw() -> void
     game.draw_circle(BIRD_X + 7.0, bird_y - 4.0, 2.0, game.BLACK)
     game.draw_rect(BIRD_X + 10.0, bird_y + 1.0, 10.0, 5.0, game.rgb(240, 120, 40))
 
-    game.draw_text(f"{score}", W / 2.0 - 10.0, 24.0, 40, game.WHITE)
+    let sw: float = game.text_width(f"{score}", 40)
+    game.draw_text(f"{score}", (W - sw) / 2.0, 24.0, 40, game.WHITE)
     if !started then
         game.draw_text("Space / click to flap", 100.0, 260.0, 20, game.WHITE)
     end
     if !alive then
-        game.draw_rect(60.0, 230.0, 280.0, 120.0, game.rgb(0, 0, 0))
-        game.draw_text("Game over", 130.0, 250.0, 30, game.RED)
-        game.draw_text(f"score {score}   best {best}", 105.0, 292.0, 20, game.WHITE)
-        game.draw_text("Space to restart", 120.0, 318.0, 18, game.WHITE)
+        game.draw_rect(60.0, 230.0, 280.0, 120.0, game.rgba(0, 0, 0, 180))
+        let t1w: float = game.text_width("Game over", 30)
+        game.draw_text("Game over", (W - t1w) / 2.0, 250.0, 30, game.RED)
+        let t2 = f"score {score}   best {best}"
+        let t2w: float = game.text_width(t2, 20)
+        game.draw_text(t2, (W - t2w) / 2.0, 292.0, 20, game.WHITE)
+        let t3w: float = game.text_width("Space to restart", 18)
+        game.draw_text("Space to restart", (W - t3w) / 2.0, 318.0, 18, game.WHITE)
     end
 end
 
@@ -155,6 +167,7 @@ while game.running() do
         if flap then
             started = true
             bird_vy = FLAP
+            game.play(SND_FLAP)
         end
         if started then
             update(game.delta())
