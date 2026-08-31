@@ -29,6 +29,8 @@ type inputReader interface {
 	keysDown() []string
 	keysPressed() []string
 	mouse() (x, y int, down, pressed []string)
+	wheel() (x, y float64)
+	textInput() string
 	windowClosing() bool
 }
 
@@ -48,6 +50,8 @@ type inputSnapshot struct {
 	KeysDown, KeysPressed   []string
 	MouseX, MouseY          int
 	MouseDown, MousePressed []string
+	WheelX, WheelY          float64
+	TextInput               string
 }
 
 func (s inputSnapshot) toMap() map[string]any {
@@ -60,6 +64,9 @@ func (s inputSnapshot) toMap() map[string]any {
 		"mouse_y":       int64(s.MouseY),
 		"mouse_down":    nonNil(s.MouseDown),
 		"mouse_pressed": nonNil(s.MousePressed),
+		"wheel_x":       s.WheelX,
+		"wheel_y":       s.WheelY,
+		"text_input":    s.TextInput,
 	}
 }
 
@@ -264,6 +271,7 @@ func (e *engine) tick(p platform) (terminate bool) {
 		return false
 	}
 	mx, my, mdown, mpressed := p.mouse()
+	wx, wy := p.wheel()
 	frame.reply <- inputSnapshot{
 		Closed:       closed,
 		DT:           dt,
@@ -273,6 +281,9 @@ func (e *engine) tick(p platform) (terminate bool) {
 		MouseY:       my,
 		MouseDown:    mdown,
 		MousePressed: mpressed,
+		WheelX:       wx,
+		WheelY:       wy,
+		TextInput:    p.textInput(),
 	}
 	return false
 }

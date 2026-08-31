@@ -123,5 +123,11 @@ func (ebitenInput) mouse() (int, int, []string, []string) {
 
 func (ebitenInput) windowClosing() bool { return ebiten.IsWindowBeingClosed() }
 
+func (ebitenInput) wheel() (float64, float64) { return ebiten.Wheel() }
+
+func (ebitenInput) textInput() string {
+	return string(ebiten.AppendInputChars(nil))
+}
+
 func (ebitenInput) setFullscreen(on bool) { ebiten.SetFullscreen(on) }
 func (ebitenInput) setTPS(n int)          { ebiten.SetTPS(n) }

@@ -21,6 +21,9 @@ type fakeInput struct {
 
 	fullscreen *bool
 	tps        *int
+
+	wheelX, wheelY float64
+	chars          string
 }
 
 func (f *fakeInput) keysDown() []string    { return f.down }
@@ -32,6 +35,9 @@ func (f *fakeInput) windowClosing() bool { return f.closing }
 
 func (f *fakeInput) setFullscreen(on bool) { f.fullscreen = &on }
 func (f *fakeInput) setTPS(n int)          { f.tps = &n }
+
+func (f *fakeInput) wheel() (float64, float64) { return f.wheelX, f.wheelY }
+func (f *fakeInput) textInput() string         { return f.chars }
 
 // startedEngine simula main(): consome o initRequest e sinaliza ready.
 func startedEngine(t *testing.T) *engine {
@@ -329,5 +335,30 @@ func TestSetFpsRejectsZero(t *testing.T) {
 	_, err := e.handleSetFps(context.Background(), 0)
 	if err == nil || !strings.Contains(err.Error(), "fps must be at least 1, got 0") {
 		t.Fatalf("want fps error, got %v", err)
+	}
+}
+
+func TestSnapshotCarriesWheelAndText(t *testing.T) {
+	e := startedEngine(t)
+	type result struct {
+		snap map[string]any
+		err  error
+	}
+	res := make(chan result, 1)
+	go func() {
+		s, err := e.handleFlip(context.Background(), []any{})
+		res <- result{s, err}
+	}()
+	waitPending(t, e)
+	e.tick(&fakeInput{wheelX: -1.5, wheelY: 3, chars: "oi"})
+	r := <-res
+	if r.err != nil {
+		t.Fatal(r.err)
+	}
+	if r.snap["wheel_x"] != -1.5 || r.snap["wheel_y"] != 3.0 {
+		t.Fatalf("wheel: %v %v", r.snap["wheel_x"], r.snap["wheel_y"])
+	}
+	if r.snap["text_input"] != "oi" {
+		t.Fatalf("text_input: %v", r.snap["text_input"])
 	}
 }
