@@ -1,6 +1,7 @@
 package main
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -160,5 +161,47 @@ func TestDecodeTextFontType(t *testing.T) {
 	_, err := decodeFrame([]any{[]any{"text", "hi", 1.0, 2.0, int64(16), int64(1), int64(2), int64(3), int64(255), "x"}})
 	if err == nil || !strings.Contains(err.Error(), `element 9 of "text": expected int, got string`) {
 		t.Fatalf("want font type error, got %v", err)
+	}
+}
+
+func TestDecodePolygon(t *testing.T) {
+	cmds, err := decodeFrame([]any{
+		[]any{"polygon", []any{0.0, 0.0, 10.0, 0.0, 5.0, 8.0}, int64(1), int64(2), int64(3), int64(255), 0},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := cmds[0]
+	if c.kind != cmdPolygon || c.thickness != 0 || c.color != (color4{1, 2, 3, 255}) {
+		t.Fatalf("polygon: %+v", c)
+	}
+	want := []float64{0, 0, 10, 0, 5, 8}
+	if !reflect.DeepEqual(c.points, want) {
+		t.Fatalf("points: want %v, got %v", want, c.points)
+	}
+}
+
+func TestDecodePolygonErrors(t *testing.T) {
+	cases := []struct {
+		name string
+		raw  []any
+		want string
+	}{
+		{"not an array", []any{[]any{"polygon", 1.0, int64(0), int64(0), int64(0), int64(255), 0}},
+			`element 1 of "polygon": expected array of numbers, got float`},
+		{"odd count", []any{[]any{"polygon", []any{0.0, 0.0, 1.0, 1.0, 2.0}, int64(0), int64(0), int64(0), int64(255), 0}},
+			`element 1 of "polygon": point list must have an even number of values, got 5`},
+		{"too few points", []any{[]any{"polygon", []any{0.0, 0.0, 1.0, 1.0}, int64(0), int64(0), int64(0), int64(255), 0}},
+			`element 1 of "polygon": needs at least 3 points, got 2`},
+		{"bad value", []any{[]any{"polygon", []any{0.0, 0.0, 1.0, 1.0, "x", 2.0}, int64(0), int64(0), int64(0), int64(255), 0}},
+			`element 1 of "polygon": expected array of numbers, got string`},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := decodeFrame(tc.raw)
+			if err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("want %q, got %v", tc.want, err)
+			}
+		})
 	}
 }

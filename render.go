@@ -54,6 +54,20 @@ func (g *game) draw(screen *ebiten.Image, c command) {
 		op.GeoM.Translate(c.x, c.y)
 		op.ColorScale.ScaleWithColor(clr)
 		drawText(screen, c.text, c.size, c.font, op)
+	case cmdPolygon:
+		var path vector.Path
+		path.MoveTo(float32(c.points[0]), float32(c.points[1]))
+		for i := 2; i < len(c.points); i += 2 {
+			path.LineTo(float32(c.points[i]), float32(c.points[i+1]))
+		}
+		path.Close()
+		draw := &vector.DrawPathOptions{AntiAlias: true}
+		draw.ColorScale.ScaleWithColor(clr)
+		if c.thickness == 0 {
+			vector.FillPath(screen, &path, &vector.FillOptions{}, draw)
+		} else {
+			vector.StrokePath(screen, &path, &vector.StrokeOptions{Width: float32(c.thickness)}, draw)
+		}
 	case cmdImage:
 		entry, err := g.e.image(c.image) // ids e recortes validados no flip
 		if err != nil {
