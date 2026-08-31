@@ -23,6 +23,13 @@ func main() {
 	p.Handle("game_load_image", noxyplugin.Func1(e.handleLoadImage))
 	p.Handle("game_quit", noxyplugin.Func0(e.handleQuit))
 	p.Handle("game_text_width", noxyplugin.Func2(handleTextWidth))
+
+	a := newAudioEngine() // independente da janela: não exige game_init
+	p.Handle("game_load_sound", noxyplugin.Func1(a.handleLoadSound))
+	p.Handle("game_play_sound", noxyplugin.Func1(a.handlePlaySound))
+	p.Handle("game_play_music", noxyplugin.Func1(a.handlePlayMusic))
+	p.Handle("game_stop_music", noxyplugin.Func0(a.handleStopMusic))
+	p.Handle("game_set_volume", noxyplugin.Func1(a.handleSetVolume))
 	go p.Main() // sai do processo (os.Exit) quando o host fecha o stdin
 
 	req := <-e.initReq

@@ -108,6 +108,33 @@ func TestLoadSoundMissingFile(t *testing.T) {
 	}
 }
 
+func TestPlaySoundUnknownID(t *testing.T) {
+	a := newAudioEngine()
+	err := a.playSound(7)
+	if err == nil || !strings.Contains(err.Error(), "unknown sound 7 (not returned by load_sound)") {
+		t.Fatalf("want unknown sound error, got %v", err)
+	}
+	if a.ctx != nil {
+		t.Fatal("id inválido não deve criar o audio.Context")
+	}
+}
+
+func TestPlayMusicMissingFile(t *testing.T) {
+	a := newAudioEngine()
+	if err := a.playMusic(filepath.Join(t.TempDir(), "nope.ogg")); err == nil {
+		t.Fatal("want error for missing file")
+	}
+	if a.ctx != nil {
+		t.Fatal("arquivo inválido não deve criar o audio.Context")
+	}
+}
+
+func TestStopMusicIdempotent(t *testing.T) {
+	a := newAudioEngine()
+	a.stopMusic()
+	a.stopMusic() // sem música: não pode explodir
+}
+
 func TestSetVolume(t *testing.T) {
 	a := newAudioEngine()
 	if err := a.setVolume(0.5); err != nil || a.volume != 0.5 {

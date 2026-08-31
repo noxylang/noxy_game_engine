@@ -7,6 +7,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -97,4 +98,110 @@ func (a *audioEngine) setVolume(v float64) error {
 		m.player.SetVolume(v)
 	}
 	return nil
+}
+
+// ensureCtx cria o audio.Context na primeira reprodução (é um singleton do
+// processo). Chamar só com a entrada já validada.
+func (a *audioEngine) ensureCtx() *audio.Context {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if a.ctx == nil {
+		a.ctx = audio.NewContext(sampleRate)
+	}
+	return a.ctx
+}
+
+// playSound toca o som do início, com sobreposição livre (um player novo
+// por play, fire-and-forget; o mixer segura o player até o fim).
+func (a *audioEngine) playSound(id int64) error {
+	a.mu.Lock()
+	pcm, ok := a.sounds[id]
+	vol := a.volume
+	a.mu.Unlock()
+	if !ok {
+		return fmt.Errorf("unknown sound %d (not returned by load_sound)", id)
+	}
+	p := a.ensureCtx().NewPlayerFromBytes(pcm)
+	p.SetVolume(vol)
+	p.Play()
+	return nil
+}
+
+// playMusic toca o arquivo em streaming, em loop infinito; com música já
+// tocando, troca (para e fecha a anterior).
+func (a *audioEngine) playMusic(path string) error {
+	f, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	stream, err := decodeAudio(f)
+	if err != nil {
+		f.Close()
+		return fmt.Errorf("%s: %w", path, err)
+	}
+	length, err := stream.Seek(0, io.SeekEnd)
+	if err != nil {
+		f.Close()
+		return fmt.Errorf("%s: %w", path, err)
+	}
+	if _, err := stream.Seek(0, io.SeekStart); err != nil {
+		f.Close()
+		return fmt.Errorf("%s: %w", path, err)
+	}
+	p, err := a.ensureCtx().NewPlayer(audio.NewInfiniteLoop(stream, length))
+	if err != nil {
+		f.Close()
+		return fmt.Errorf("%s: %w", path, err)
+	}
+	a.mu.Lock()
+	old := a.music
+	a.music = &musicEntry{player: p, file: f}
+	vol := a.volume
+	a.mu.Unlock()
+	if old != nil {
+		old.player.Close()
+		old.file.Close()
+	}
+	p.SetVolume(vol)
+	p.Play()
+	return nil
+}
+
+// stopMusic para e fecha a música. Idempotente.
+func (a *audioEngine) stopMusic() {
+	a.mu.Lock()
+	m := a.music
+	a.music = nil
+	a.mu.Unlock()
+	if m != nil {
+		m.player.Close()
+		m.file.Close()
+	}
+}
+
+// ---- handlers (goroutine do SDK) ----
+
+func (a *audioEngine) handleLoadSound(ctx context.Context, path string) (map[string]any, error) {
+	id, err := a.loadSound(path)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"id": id}, nil
+}
+
+func (a *audioEngine) handlePlaySound(ctx context.Context, id int64) (any, error) {
+	return nil, a.playSound(id)
+}
+
+func (a *audioEngine) handlePlayMusic(ctx context.Context, path string) (any, error) {
+	return nil, a.playMusic(path)
+}
+
+func (a *audioEngine) handleStopMusic(ctx context.Context) (any, error) {
+	a.stopMusic()
+	return nil, nil
+}
+
+func (a *audioEngine) handleSetVolume(ctx context.Context, v float64) (any, error) {
+	return nil, a.setVolume(v)
 }

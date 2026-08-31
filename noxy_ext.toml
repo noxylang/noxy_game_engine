@@ -3,7 +3,7 @@ abi = 1
 kind = "process"
 min_noxy = "0.23.0"
 concurrency = "single"          # um jogo, um loop: uma chamada por vez
-capabilities = ["display", "fs"] # abre uma janela; load_image le arquivos
+capabilities = ["display", "fs"] # janela e som; load_image/load_sound leem arquivos
 
 [binaries]                      # release assets; noxy --get baixa o do seu OS/arch
 windows-amd64 = "noxy-plugin-game-windows-amd64.exe"
@@ -38,3 +38,33 @@ returns = "void"
 name = "game_text_width"        # (s, size) -> largura em px na fonte embutida
 params = ["string", "int"]
 returns = "float"
+
+[[export]]
+name = "game_load_sound"        # (path) -> {"id"}; WAV ou OGG inteiro na memoria
+params = ["string"]
+returns = "map[string]any"
+stateful = true
+
+[[export]]
+name = "game_play_sound"        # (id): toca do inicio, sobreposicao livre
+params = ["int"]
+returns = "void"
+stateful = true
+
+[[export]]
+name = "game_play_music"        # (path): streaming em loop; troca a musica atual
+params = ["string"]
+returns = "void"
+stateful = true
+
+[[export]]
+name = "game_stop_music"
+params = []
+returns = "void"
+stateful = true
+
+[[export]]
+name = "game_set_volume"        # (v 0..1): musica na hora, sons no proximo play
+params = ["float"]
+returns = "void"
+stateful = true
