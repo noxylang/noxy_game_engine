@@ -31,6 +31,7 @@ type inputReader interface {
 	mouse() (x, y int, down, pressed []string)
 	wheel() (x, y float64)
 	textInput() string
+	pads() (down, pressed []string, axes []float64)
 	windowClosing() bool
 }
 
@@ -52,6 +53,8 @@ type inputSnapshot struct {
 	MouseDown, MousePressed []string
 	WheelX, WheelY          float64
 	TextInput               string
+	PadDown, PadPressed     []string
+	PadAxes                 []float64
 }
 
 func (s inputSnapshot) toMap() map[string]any {
@@ -67,12 +70,22 @@ func (s inputSnapshot) toMap() map[string]any {
 		"wheel_x":       s.WheelX,
 		"wheel_y":       s.WheelY,
 		"text_input":    s.TextInput,
+		"pad_down":      nonNil(s.PadDown),
+		"pad_pressed":   nonNil(s.PadPressed),
+		"pad_axes":      nonNilF(s.PadAxes),
 	}
 }
 
 func nonNil(xs []string) []string {
 	if xs == nil {
 		return []string{}
+	}
+	return xs
+}
+
+func nonNilF(xs []float64) []float64 {
+	if xs == nil {
+		return []float64{}
 	}
 	return xs
 }
@@ -272,6 +285,7 @@ func (e *engine) tick(p platform) (terminate bool) {
 	}
 	mx, my, mdown, mpressed := p.mouse()
 	wx, wy := p.wheel()
+	pdown, ppressed, paxes := p.pads()
 	frame.reply <- inputSnapshot{
 		Closed:       closed,
 		DT:           dt,
@@ -284,6 +298,9 @@ func (e *engine) tick(p platform) (terminate bool) {
 		WheelX:       wx,
 		WheelY:       wy,
 		TextInput:    p.textInput(),
+		PadDown:      pdown,
+		PadPressed:   ppressed,
+		PadAxes:      paxes,
 	}
 	return false
 }

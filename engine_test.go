@@ -24,6 +24,9 @@ type fakeInput struct {
 
 	wheelX, wheelY float64
 	chars          string
+
+	padDown, padPressed []string
+	padAxes             []float64
 }
 
 func (f *fakeInput) keysDown() []string    { return f.down }
@@ -38,6 +41,10 @@ func (f *fakeInput) setTPS(n int)          { f.tps = &n }
 
 func (f *fakeInput) wheel() (float64, float64) { return f.wheelX, f.wheelY }
 func (f *fakeInput) textInput() string         { return f.chars }
+
+func (f *fakeInput) pads() ([]string, []string, []float64) {
+	return f.padDown, f.padPressed, f.padAxes
+}
 
 // startedEngine simula main(): consome o initRequest e sinaliza ready.
 func startedEngine(t *testing.T) *engine {

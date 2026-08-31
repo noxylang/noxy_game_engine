@@ -131,3 +131,39 @@ func (ebitenInput) textInput() string {
 
 func (ebitenInput) setFullscreen(on bool) { ebiten.SetFullscreen(on) }
 func (ebitenInput) setTPS(n int)          { ebiten.SetTPS(n) }
+
+func (ebitenInput) pads() ([]string, []string, []float64) {
+	return gatherPads(connectedPads())
+}
+
+// ebitenPads lê os controles com layout padrão; a posição na lista é o
+// número do controle visto pelo script.
+type ebitenPads struct{ ids []ebiten.GamepadID }
+
+func connectedPads() ebitenPads {
+	var out []ebiten.GamepadID
+	for _, id := range ebiten.AppendGamepadIDs(nil) {
+		if ebiten.IsStandardGamepadLayoutAvailable(id) {
+			out = append(out, id)
+		}
+	}
+	return ebitenPads{ids: out}
+}
+
+func (p ebitenPads) padCount() int { return len(p.ids) }
+
+func (p ebitenPads) pressedButtons(pad int) []ebiten.StandardGamepadButton {
+	return inpututil.AppendPressedStandardGamepadButtons(p.ids[pad], nil)
+}
+
+func (p ebitenPads) justPressedButtons(pad int) []ebiten.StandardGamepadButton {
+	return inpututil.AppendJustPressedStandardGamepadButtons(p.ids[pad], nil)
+}
+
+func (p ebitenPads) axisValue(pad int, a ebiten.StandardGamepadAxis) float64 {
+	return ebiten.StandardGamepadAxisValue(p.ids[pad], a)
+}
+
+func (p ebitenPads) buttonValue(pad int, b ebiten.StandardGamepadButton) float64 {
+	return ebiten.StandardGamepadButtonValue(p.ids[pad], b)
+}
