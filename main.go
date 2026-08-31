@@ -24,6 +24,8 @@ func main() {
 	p.Handle("game_quit", noxyplugin.Func0(e.handleQuit))
 	p.Handle("game_text_width", noxyplugin.Func3(handleTextWidth))
 	p.Handle("game_load_font", noxyplugin.Func1(handleLoadFont))
+	p.Handle("game_set_fullscreen", noxyplugin.Func1(e.handleSetFullscreen))
+	p.Handle("game_set_fps", noxyplugin.Func1(e.handleSetFps))
 
 	a := newAudioEngine() // independente da janela: não exige game_init
 	p.Handle("game_load_sound", noxyplugin.Func1(a.handleLoadSound))

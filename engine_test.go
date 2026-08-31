@@ -18,14 +18,20 @@ type fakeInput struct {
 	mx, my        int
 	mdown, mpress []string
 	closing       bool
+
+	fullscreen *bool
+	tps        *int
 }
 
-func (f fakeInput) keysDown() []string    { return f.down }
-func (f fakeInput) keysPressed() []string { return f.pressed }
-func (f fakeInput) mouse() (int, int, []string, []string) {
+func (f *fakeInput) keysDown() []string    { return f.down }
+func (f *fakeInput) keysPressed() []string { return f.pressed }
+func (f *fakeInput) mouse() (int, int, []string, []string) {
 	return f.mx, f.my, f.mdown, f.mpress
 }
-func (f fakeInput) windowClosing() bool { return f.closing }
+func (f *fakeInput) windowClosing() bool { return f.closing }
+
+func (f *fakeInput) setFullscreen(on bool) { f.fullscreen = &on }
+func (f *fakeInput) setTPS(n int)          { f.tps = &n }
 
 // startedEngine simula main(): consome o initRequest e sinaliza ready.
 func startedEngine(t *testing.T) *engine {
@@ -116,7 +122,7 @@ func TestFlipDeliversFrameAndSnapshot(t *testing.T) {
 		res <- result{s, err}
 	}()
 	waitPending(t, e)
-	in := fakeInput{down: []string{"left"}, pressed: []string{"space"}, mx: 5, my: 6, mdown: []string{"left"}, mpress: []string{"left"}}
+	in := &fakeInput{down: []string{"left"}, pressed: []string{"space"}, mx: 5, my: 6, mdown: []string{"left"}, mpress: []string{"left"}}
 	if e.tick(in) {
 		t.Fatal("tick asked to terminate")
 	}
@@ -143,7 +149,7 @@ func TestFlipDeliversFrameAndSnapshot(t *testing.T) {
 		t.Errorf("dt %+v", r.snap["dt"])
 	}
 	// um tick sem frame pendente mantém o frame atual e não entrega nada
-	if e.tick(fakeInput{}) || len(e.currentFrame()) != 1 {
+	if e.tick(&fakeInput{}) || len(e.currentFrame()) != 1 {
 		t.Fatal("idle tick changed state")
 	}
 }
@@ -217,7 +223,7 @@ func TestWindowCloseMarksClosed(t *testing.T) {
 		res <- s
 	}()
 	waitPending(t, e)
-	if e.tick(fakeInput{closing: true}) {
+	if e.tick(&fakeInput{closing: true}) {
 		t.Fatal("closing the window must not terminate: the script decides")
 	}
 	if s := <-res; s["closed"] != true {
@@ -230,7 +236,7 @@ func TestQuitTerminatesAndBlocksFlip(t *testing.T) {
 	if _, err := e.handleQuit(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	if !e.tick(fakeInput{}) {
+	if !e.tick(&fakeInput{}) {
 		t.Fatal("tick after quit must terminate")
 	}
 	if _, err := e.handleQuit(context.Background()); err != nil {
@@ -282,5 +288,46 @@ func TestSnapshotToMapNeverNil(t *testing.T) {
 		if v, ok := m[k].([]string); !ok || v == nil {
 			t.Errorf("%s = %#v, want empty non-nil slice", k, m[k])
 		}
+	}
+}
+
+func TestSetFullscreenAppliedOnTick(t *testing.T) {
+	e := startedEngine(t)
+	if _, err := e.handleSetFullscreen(context.Background(), true); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.handleSetFps(context.Background(), 30); err != nil {
+		t.Fatal(err)
+	}
+	in := &fakeInput{}
+	e.tick(in) // aplica mesmo sem frame pendente
+	if in.fullscreen == nil || !*in.fullscreen {
+		t.Fatalf("fullscreen não aplicado: %v", in.fullscreen)
+	}
+	if in.tps == nil || *in.tps != 30 {
+		t.Fatalf("tps não aplicado: %v", in.tps)
+	}
+	in2 := &fakeInput{}
+	e.tick(in2) // pedido consumido: não repete
+	if in2.fullscreen != nil || in2.tps != nil {
+		t.Fatal("pedido deve ser aplicado uma vez só")
+	}
+}
+
+func TestWindowOpsRequireInit(t *testing.T) {
+	e := newEngine()
+	if _, err := e.handleSetFullscreen(context.Background(), true); !errors.Is(err, errNotInitialized) {
+		t.Fatalf("fullscreen sem init: %v", err)
+	}
+	if _, err := e.handleSetFps(context.Background(), 60); !errors.Is(err, errNotInitialized) {
+		t.Fatalf("fps sem init: %v", err)
+	}
+}
+
+func TestSetFpsRejectsZero(t *testing.T) {
+	e := startedEngine(t)
+	_, err := e.handleSetFps(context.Background(), 0)
+	if err == nil || !strings.Contains(err.Error(), "fps must be at least 1, got 0") {
+		t.Fatalf("want fps error, got %v", err)
 	}
 }

@@ -32,6 +32,15 @@ type inputReader interface {
 	windowClosing() bool
 }
 
+// platform é o que o tick usa a cada Update: o input do frame e as
+// operações de janela, que precisam rodar na thread principal. render.go dá
+// a implementação sobre o Ebiten, os testes dão uma fake.
+type platform interface {
+	inputReader
+	setFullscreen(on bool)
+	setTPS(n int)
+}
+
 // inputSnapshot é o retorno de game_flip.
 type inputSnapshot struct {
 	Closed                  bool
@@ -94,6 +103,9 @@ type engine struct {
 	pending  *pendingFrame
 	current  []command
 	lastTick time.Time
+
+	pendingFullscreen *bool // pedidos de janela, aplicados pelo tick
+	pendingTPS        *int
 
 	images    map[int64]*imageEntry
 	nextImage int64
@@ -218,16 +230,18 @@ func (e *engine) hasPendingFrame() bool {
 // tick é o corpo de Update: consome o frame pendente (se houver), colhe o
 // input e responde ao flip que o entregou. Devolve true quando o Ebiten
 // deve encerrar (game_quit).
-func (e *engine) tick(in inputReader) (terminate bool) {
+func (e *engine) tick(p platform) (terminate bool) {
 	e.markReady()
 	e.mu.Lock()
 	if e.quit {
 		e.mu.Unlock()
 		return true
 	}
-	if in.windowClosing() {
+	if p.windowClosing() {
 		e.closed = true
 	}
+	fs, tps := e.pendingFullscreen, e.pendingTPS
+	e.pendingFullscreen, e.pendingTPS = nil, nil
 	frame := e.pending
 	e.pending = nil
 	if frame != nil {
@@ -240,15 +254,21 @@ func (e *engine) tick(in inputReader) (terminate bool) {
 	}
 	closed := e.closed
 	e.mu.Unlock()
+	if fs != nil {
+		p.setFullscreen(*fs)
+	}
+	if tps != nil {
+		p.setTPS(*tps)
+	}
 	if frame == nil {
 		return false
 	}
-	mx, my, mdown, mpressed := in.mouse()
+	mx, my, mdown, mpressed := p.mouse()
 	frame.reply <- inputSnapshot{
 		Closed:       closed,
 		DT:           dt,
-		KeysDown:     in.keysDown(),
-		KeysPressed:  in.keysPressed(),
+		KeysDown:     p.keysDown(),
+		KeysPressed:  p.keysPressed(),
 		MouseX:       mx,
 		MouseY:       my,
 		MouseDown:    mdown,
@@ -273,6 +293,33 @@ func (e *engine) handleQuit(ctx context.Context) (any, error) {
 	}
 	e.quit = true
 	e.closed = true
+	return nil, nil
+}
+
+// handleSetFullscreen: game_set_fullscreen(on) -> void. Aplicado pelo tick
+// seguinte, na thread principal.
+func (e *engine) handleSetFullscreen(ctx context.Context, on bool) (any, error) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if !e.started {
+		return nil, errNotInitialized
+	}
+	e.pendingFullscreen = &on
+	return nil, nil
+}
+
+// handleSetFps: game_set_fps(n) -> void.
+func (e *engine) handleSetFps(ctx context.Context, n int64) (any, error) {
+	if n < 1 {
+		return nil, fmt.Errorf("fps must be at least 1, got %d", n)
+	}
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if !e.started {
+		return nil, errNotInitialized
+	}
+	tps := int(n)
+	e.pendingTPS = &tps
 	return nil, nil
 }
 

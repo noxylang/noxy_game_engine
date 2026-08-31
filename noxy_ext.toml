@@ -46,6 +46,18 @@ returns = "map[string]any"
 stateful = true
 
 [[export]]
+name = "game_set_fullscreen"    # (on): janela cheia; o Layout escala e faz letterbox
+params = ["bool"]
+returns = "void"
+stateful = true
+
+[[export]]
+name = "game_set_fps"           # (n >= 1): ticks por segundo (padrao 60)
+params = ["int"]
+returns = "void"
+stateful = true
+
+[[export]]
 name = "game_load_sound"        # (path) -> {"id"}; WAV ou OGG inteiro na memoria
 params = ["string"]
 returns = "map[string]any"
