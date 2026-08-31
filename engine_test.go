@@ -112,7 +112,7 @@ func TestFlipDeliversFrameAndSnapshot(t *testing.T) {
 	}
 	res := make(chan result, 1)
 	go func() {
-		s, err := e.handleFlip(context.Background(), []any{[]any{"clear", int64(1), int64(2), int64(3)}})
+		s, err := e.handleFlip(context.Background(), []any{[]any{"clear", int64(1), int64(2), int64(3), int64(255)}})
 		res <- result{s, err}
 	}()
 	waitPending(t, e)
@@ -159,9 +159,23 @@ func TestFlipRejectsBadFrameWithoutReplacingCurrent(t *testing.T) {
 	}
 }
 
+func TestFlipRejectsSourceRectOutsideImage(t *testing.T) {
+	e := startedEngine(t)
+	e.images[2] = &imageEntry{src: image.NewRGBA(image.Rect(0, 0, 64, 32))}
+	frame := []any{[]any{"image", int64(2), 40.0, 0.0, 32.0, 32.0, 0.0, 0.0, 1.0, 0.0, 1.0, false}}
+	_, err := e.handleFlip(context.Background(), frame)
+	want := `command 0: element 2 of "image": source rect 40,0 32x32 outside image 2 (64x32)`
+	if err == nil || !strings.Contains(err.Error(), want) {
+		t.Fatalf("want %q, got %v", want, err)
+	}
+	if e.hasPendingFrame() {
+		t.Fatal("frame inválido não deve ficar pendente")
+	}
+}
+
 func TestFlipRejectsUnknownImage(t *testing.T) {
 	e := startedEngine(t)
-	_, err := e.handleFlip(context.Background(), []any{[]any{"image", int64(42), 0.0, 0.0, 1.0, 0.0}})
+	_, err := e.handleFlip(context.Background(), []any{[]any{"image", int64(42), 0.0, 0.0, 8.0, 8.0, 0.0, 0.0, 1.0, 0.0, 1.0, false}})
 	if err == nil || !strings.Contains(err.Error(), "command 0: unknown image 42") {
 		t.Fatalf("got %v", err)
 	}

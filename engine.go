@@ -170,11 +170,19 @@ func (e *engine) handleFlip(ctx context.Context, raw []any) (map[string]any, err
 		return nil, errClosed
 	}
 	for i, c := range cmds {
-		if c.kind == cmdImage {
-			if _, ok := e.images[c.image]; !ok {
-				e.mu.Unlock()
-				return nil, fmt.Errorf("command %d: unknown image %d (not returned by load_image)", i, c.image)
-			}
+		if c.kind != cmdImage {
+			continue
+		}
+		entry, ok := e.images[c.image]
+		if !ok {
+			e.mu.Unlock()
+			return nil, fmt.Errorf("command %d: unknown image %d (not returned by load_image)", i, c.image)
+		}
+		b := entry.src.Bounds()
+		if c.srcX < 0 || c.srcY < 0 || c.srcX+c.srcW > float64(b.Dx()) || c.srcY+c.srcH > float64(b.Dy()) {
+			e.mu.Unlock()
+			return nil, fmt.Errorf(`command %d: element 2 of "image": source rect %g,%g %gx%g outside image %d (%dx%d)`,
+				i, c.srcX, c.srcY, c.srcW, c.srcH, c.image, b.Dx(), b.Dy())
 		}
 	}
 	frame := &pendingFrame{cmds: cmds, reply: make(chan inputSnapshot, 1)}

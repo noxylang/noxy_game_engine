@@ -3,6 +3,7 @@
 package main
 
 import (
+	"image"
 	"image/color"
 	"math"
 
@@ -30,7 +31,7 @@ func (g *game) Draw(screen *ebiten.Image) {
 }
 
 func (g *game) draw(screen *ebiten.Image, c command) {
-	clr := color.RGBA{c.color.R, c.color.G, c.color.B, 255}
+	clr := color.NRGBA{c.color.R, c.color.G, c.color.B, c.color.A}
 	switch c.kind {
 	case cmdClear:
 		screen.Fill(clr)
@@ -54,24 +55,34 @@ func (g *game) draw(screen *ebiten.Image, c command) {
 		op.ColorScale.ScaleWithColor(clr)
 		text.Draw(screen, c.text, fontFace(c.size), op)
 	case cmdImage:
-		entry, err := g.e.image(c.image) // ids validados no flip; aqui nunca falha
+		entry, err := g.e.image(c.image) // ids e recortes validados no flip
 		if err != nil {
 			return
 		}
 		if entry.tex == nil {
 			entry.tex = ebiten.NewImageFromImage(entry.src)
 		}
-		w := float64(entry.tex.Bounds().Dx()) * c.scale
-		h := float64(entry.tex.Bounds().Dy()) * c.scale
+		sx, sy := int(c.srcX), int(c.srcY)
+		sw, sh := int(c.srcW), int(c.srcH)
+		sub := entry.tex.SubImage(image.Rect(sx, sy, sx+sw, sy+sh)).(*ebiten.Image)
 		op := &ebiten.DrawImageOptions{}
+		if c.flipX {
+			op.GeoM.Scale(-1, 1)
+			op.GeoM.Translate(float64(sw), 0)
+		}
 		op.GeoM.Scale(c.scale, c.scale)
 		if c.angle != 0 {
+			w := float64(sw) * c.scale
+			h := float64(sh) * c.scale
 			op.GeoM.Translate(-w/2, -h/2)
 			op.GeoM.Rotate(c.angle * math.Pi / 180)
 			op.GeoM.Translate(w/2, h/2)
 		}
 		op.GeoM.Translate(c.x, c.y)
-		screen.DrawImage(entry.tex, op)
+		if c.opacity < 1 {
+			op.ColorScale.ScaleAlpha(float32(c.opacity))
+		}
+		screen.DrawImage(sub, op)
 	}
 }
 

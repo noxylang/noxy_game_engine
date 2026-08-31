@@ -15,7 +15,7 @@ const (
 	cmdImage
 )
 
-type color3 struct{ R, G, B uint8 }
+type color4 struct{ R, G, B, A uint8 }
 
 // command é um desenho decodificado. Campos por tag:
 //
@@ -24,18 +24,20 @@ type color3 struct{ R, G, B uint8 }
 //	circle: x y (centro) w (raio) color thickness
 //	line:   x y (início) w h (fim) color thickness
 //	text:   text x y size color
-//	image:  image x y scale angle (graus)
+//	image:  image srcX srcY srcW srcH x y scale angle (graus) opacity flipX
 type command struct {
 	kind                                      cmdKind
-	color                                     color3
+	color                                     color4
 	x, y, w, h, thickness, size, scale, angle float64
+	srcX, srcY, srcW, srcH, opacity           float64
+	flipX                                     bool
 	text                                      string
 	image                                     int64
 }
 
 // arity é o tamanho exato (tag incluída) de cada comando.
 var arity = map[string]int{
-	"clear": 4, "rect": 9, "circle": 8, "line": 9, "text": 8, "image": 6,
+	"clear": 5, "rect": 10, "circle": 9, "line": 10, "text": 9, "image": 12,
 }
 
 func decodeFrame(raw []any) ([]command, error) {
@@ -79,17 +81,17 @@ func decodeCommand(item any) (command, error) {
 		c.kind = cmdRect
 		c.x, c.y, c.w, c.h = r.num(1), r.num(2), r.num(3), r.num(4)
 		c.color = r.color(5)
-		c.thickness = r.thickness(8)
+		c.thickness = r.thickness(9)
 	case "circle":
 		c.kind = cmdCircle
 		c.x, c.y, c.w = r.num(1), r.num(2), r.num(3)
 		c.color = r.color(4)
-		c.thickness = r.thickness(7)
+		c.thickness = r.thickness(8)
 	case "line":
 		c.kind = cmdLine
 		c.x, c.y, c.w, c.h = r.num(1), r.num(2), r.num(3), r.num(4)
 		c.color = r.color(5)
-		c.thickness = r.thickness(8)
+		c.thickness = r.thickness(9)
 	case "text":
 		c.kind = cmdText
 		c.text = r.str(1)
@@ -98,7 +100,12 @@ func decodeCommand(item any) (command, error) {
 	case "image":
 		c.kind = cmdImage
 		c.image = r.integer(1)
-		c.x, c.y, c.scale, c.angle = r.num(2), r.num(3), r.num(4), r.num(5)
+		c.srcX, c.srcY = r.num(2), r.num(3)
+		c.srcW, c.srcH = r.positive(4), r.positive(5)
+		c.x, c.y = r.num(6), r.num(7)
+		c.scale, c.angle = r.num(8), r.num(9)
+		c.opacity = r.opacity(10)
+		c.flipX = r.boolean(11)
 	}
 	if r.err != nil {
 		return command{}, r.err
@@ -152,6 +159,31 @@ func (r *reader) str(i int) string {
 	return s
 }
 
+// positive lê um tamanho de sub-retângulo (largura/altura de origem).
+func (r *reader) positive(i int) float64 {
+	v := r.num(i)
+	if r.err == nil && v <= 0 {
+		r.fail(i, "source size must be positive, got %g", v)
+	}
+	return v
+}
+
+func (r *reader) opacity(i int) float64 {
+	v := r.num(i)
+	if r.err == nil && (v < 0 || v > 1) {
+		r.fail(i, "opacity out of range 0..1, got %g", v)
+	}
+	return v
+}
+
+func (r *reader) boolean(i int) bool {
+	b, ok := r.parts[i].(bool)
+	if !ok {
+		r.fail(i, "expected bool, got %s", typeName(r.parts[i]))
+	}
+	return b
+}
+
 func (r *reader) thickness(i int) float64 {
 	t := r.num(i)
 	if t < 0 {
@@ -160,10 +192,10 @@ func (r *reader) thickness(i int) float64 {
 	return t
 }
 
-// color lê r, g, b nos elementos i, i+1, i+2.
-func (r *reader) color(i int) color3 {
-	var out [3]uint8
-	for k := 0; k < 3; k++ {
+// color lê r, g, b, a nos elementos i..i+3.
+func (r *reader) color(i int) color4 {
+	var out [4]uint8
+	for k := 0; k < 4; k++ {
 		idx := i + k
 		var n int64
 		switch v := r.parts[idx].(type) {
@@ -173,15 +205,15 @@ func (r *reader) color(i int) color3 {
 			n = int64(v)
 		default:
 			r.fail(idx, "color component must be an int, got %s", typeName(v))
-			return color3{}
+			return color4{}
 		}
 		if n < 0 || n > 255 {
 			r.fail(idx, "color component out of range 0..255, got %d", n)
-			return color3{}
+			return color4{}
 		}
 		out[k] = uint8(n)
 	}
-	return color3{out[0], out[1], out[2]}
+	return color4{out[0], out[1], out[2], out[3]}
 }
 
 // typeName nomeia um valor NXB decodificado no vocabulário do Noxy.
