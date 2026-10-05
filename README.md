@@ -14,7 +14,7 @@ darwin/arm64.
 ## Installation
 
 ```bash
-noxy --get github.com/noxylang/noxy_game_engine@v0.3.0
+noxy --get github.com/noxylang/noxy_game_engine@v0.3.2
 ```
 
 Without `@version`, `--get` resolves the newest release tag. The package lands
