@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/estevaofon/noxy/sdk/noxyplugin"
+	"github.com/noxylang/noxy/sdk/noxyplugin"
 	"github.com/hajimehoshi/ebiten/v2"
 )
 

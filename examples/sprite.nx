@@ -2,7 +2,7 @@
 // rotating; a half-transparent, mirrored copy follows the mouse.
 // Escape quits.
 // Run from the repository root: noxy examples/sprite.nx
-use github_com.estevaofon.noxy_game_engine as game
+use github_com.noxylang.noxy_game_engine as game
 
 game.init(400, 300, "Sprite")
 let sprite: game.Image = game.load_image("examples/sprite.png")

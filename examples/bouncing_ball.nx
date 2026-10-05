@@ -1,5 +1,5 @@
 // bouncing_ball.nx — a ball bouncing off the window edges. Escape quits.
-use github_com.estevaofon.noxy_game_engine as game
+use github_com.noxylang.noxy_game_engine as game
 
 let W = 640.0
 let H = 480.0

@@ -1,6 +1,6 @@
 # Noxy Game Engine
 
-A small 2D game engine for the [Noxy](https://github.com/estevaofon/noxy)
+A small 2D game engine for the [Noxy](https://github.com/noxylang/noxy)
 language in the spirit of pygame — simple and immediate — shipped as a
 **process extension**: `noxy --get` downloads a prebuilt binary for your
 platform, verifies it, and records its hash in `noxy.sum`. No Go toolchain,
@@ -14,18 +14,18 @@ darwin/arm64.
 ## Installation
 
 ```bash
-noxy --get github.com/estevaofon/noxy_game_engine@v0.3.0
+noxy --get github.com/noxylang/noxy_game_engine@v0.3.0
 ```
 
 Without `@version`, `--get` resolves the newest release tag. The package lands
-in `noxy_libs/github_com/estevaofon/noxy_game_engine/` with the binary for
+in `noxy_libs/github_com/noxylang/noxy_game_engine/` with the binary for
 your OS/arch in `bin/`; `noxy.sum` gets one line for the manifest plus one per
 published binary, so commit it.
 
 ## Usage
 
 ```noxy
-use github_com.estevaofon.noxy_game_engine as game
+use github_com.noxylang.noxy_game_engine as game
 
 let W = 640.0
 let H = 480.0
@@ -286,7 +286,7 @@ Platforms not listed under `[binaries]` in `noxy_ext.toml` are an error at
 ## Development
 
 The extension is a Go program on the Noxy plugin SDK
-(`github.com/estevaofon/noxy/sdk/noxyplugin`). To run a checkout without a
+(`github.com/noxylang/noxy/sdk/noxyplugin`). To run a checkout without a
 release, build your platform's asset (the name is in `[binaries]` of
 `noxy_ext.toml`) and point a project at the checkout:
 
@@ -296,7 +296,7 @@ go build -o bin/noxy-plugin-game-windows-amd64.exe .   # or -linux-amd64, -darwi
 ```
 
 Copy (or link) the checkout to
-`<project>/noxy_libs/github_com/estevaofon/noxy_game_engine`; without a
+`<project>/noxy_libs/github_com/noxylang/noxy_game_engine`; without a
 `noxy.sum` entry the VM prints a trust-on-first-use warning and runs it.
 Then `noxy examples/smoke.nx` should open a window for half a second and
 print `ok`.

@@ -1,7 +1,7 @@
 // animation.nx — sprite sheet: examples/walker.png has 4 frames of 32x32
 // side by side; draw_image_sub_ex cuts out the frame and flip_x turns the
 // walker around. Run from the repository root: noxy examples/animation.nx
-use github_com.estevaofon.noxy_game_engine as game
+use github_com.noxylang.noxy_game_engine as game
 
 let FRAME = 32.0
 let FRAMES = 4

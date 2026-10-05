@@ -7,7 +7,7 @@
 // you hold — the raw "b0".."bN" names when the controller has no known
 // layout (see add_gamepad_mapping in the README).
 // Run from the repository root: noxy examples/showcase.nx
-use github_com.estevaofon.noxy_game_engine as game
+use github_com.noxylang.noxy_game_engine as game
 use strings
 
 let W = 640.0

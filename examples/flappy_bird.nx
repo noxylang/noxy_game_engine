@@ -1,6 +1,6 @@
 // flappy_bird.nx — flap with Space or a left click, pass the pipes, don't
 // touch anything. Space restarts after a crash; Escape quits.
-use github_com.estevaofon.noxy_game_engine as game
+use github_com.noxylang.noxy_game_engine as game
 use rand
 
 let W = 400.0

@@ -6,8 +6,6 @@ github.com/ebitengine/oto/v3 v3.4.1 h1:uX7B03/P2P8oWiSI5HXjyjSP4besYn3V9nDk3cR+e
 github.com/ebitengine/oto/v3 v3.4.1/go.mod h1:IOleLVD0m+CMak3mRVwsYY8vTctQgOM0iiL6S7Ar7eI=
 github.com/ebitengine/purego v0.9.0 h1:mh0zpKBIXDceC63hpvPuGLiJ8ZAa3DfrFTudmfi8A4k=
 github.com/ebitengine/purego v0.9.0/go.mod h1:iIjxzd6CiRiOG0UyXP+V1+jWqUXVjPKLAI0mRfJZTmQ=
-github.com/estevaofon/noxy/sdk/noxyplugin v0.1.0 h1:4BCIg+faFDAIhaiB40cKxn9SnzcBIdFoV0LVR7OOJ38=
-github.com/estevaofon/noxy/sdk/noxyplugin v0.1.0/go.mod h1:8JFy0k46p+HbFooarVYvqyL1YVyOX4h1JyuwESHk7dM=
 github.com/go-text/typesetting v0.3.0 h1:OWCgYpp8njoxSRpwrdd1bQOxdjOXDj9Rqart9ML4iF4=
 github.com/go-text/typesetting v0.3.0/go.mod h1:qjZLkhRgOEYMhU9eHBr3AR4sfnGJvOXNLt8yRAySFuY=
 github.com/go-text/typesetting-utils v0.0.0-20241103174707-87a29e9e6066 h1:qCuYC+94v2xrb1PoS4NIDe7DGYtLnU2wWiQe9a1B1c0=
@@ -22,6 +20,8 @@ github.com/jfreymuth/oggvorbis v1.0.5 h1:u+Ck+R0eLSRhgq8WTmffYnrVtSztJcYrl588DM4
 github.com/jfreymuth/oggvorbis v1.0.5/go.mod h1:1U4pqWmghcoVsCJJ4fRBKv9peUJMBHixthRlBeD6uII=
 github.com/jfreymuth/vorbis v1.0.2 h1:m1xH6+ZI4thH927pgKD8JOH4eaGRm18rEE9/0WKjvNE=
 github.com/jfreymuth/vorbis v1.0.2/go.mod h1:DoftRo4AznKnShRl1GxiTFCseHr4zR9BN3TWXyuzrqQ=
+github.com/noxylang/noxy/sdk/noxyplugin v0.1.1 h1:LqOJbXafbX8pWLGRHnI1C8usLzCeNT542WbH85AOhwU=
+github.com/noxylang/noxy/sdk/noxyplugin v0.1.1/go.mod h1:wuzGfzFX0eAhjOMqngTOiGpH+EotAHjXoPas3LRlClY=
 github.com/pierrec/lz4/v4 v4.1.22 h1:cKFw6uJDK+/gfw5BcDL0JL5aBsAFdsIT18eRtLj7VIU=
 github.com/pierrec/lz4/v4 v4.1.22/go.mod h1:gZWDp/Ze/IJXGXf23ltt2EXimqmTUXEy0GFuRQyBid4=
 github.com/rivo/uniseg v0.4.7 h1:WUdvkW8uEhrYfLC4ZzdpI2ztxP1I582+49Oc5Mq64VQ=

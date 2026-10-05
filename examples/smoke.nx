@@ -1,6 +1,6 @@
 // smoke.nx — opens a window, draws a few frames and quits. Run it to check
 // the installation: `noxy examples/smoke.nx` prints "ok" and exits 0.
-use github_com.estevaofon.noxy_game_engine as game
+use github_com.noxylang.noxy_game_engine as game
 
 game.init(320, 240, "noxy_game_engine smoke")
 let frames = 0
